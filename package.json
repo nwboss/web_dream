@@ -1,0 +1,30 @@
+{
+  "name": "jimeng-manhua-studio",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:jimeng-image": "node scripts/test_jimeng_image.mjs",
+    "test:jimeng-image:py": "python3 scripts/test_jimeng_image.py",
+    "test:jimeng-image:sdk": "python3 scripts/test_jimeng_image_sdk.py"
+  },
+  "dependencies": {
+    "@volcengine/openapi": "^1.36.0",
+    "next": "^16.2.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.1",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "typescript": "5.8.3"
+  }
+}
