@@ -2,6 +2,13 @@
   "1670867932@qq.com": {
     "imageJobs": [
       {
+        "id": "job_c34v2hk4",
+        "kind": "image",
+        "status": "succeeded",
+        "createdAt": "2026-03-29T04:19:30.224Z",
+        "message": "已完成独立图片生成"
+      },
+      {
         "id": "job_tft519pq",
         "kind": "image",
         "status": "succeeded",
@@ -31,6 +38,17 @@
       }
     ],
     "imageAssets": [
+      {
+        "id": "asset_k70bynjh",
+        "kind": "image",
+        "title": "奥特曼",
+        "prompt": "奥特曼和孙悟空打架",
+        "previewUrl": "/api/studio/assets/asset_k70bynjh",
+        "createdAt": "2026-03-29T04:19:40.550Z",
+        "source": "jimeng",
+        "storagePath": "asset_k70bynjh.jpg",
+        "originalUrl": "https://p3-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/202603291219396116E7DAC5155F08C6D3-3959-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1774844379&x-signature=VVdN5lzEyLGGs96ZC%2F5BkW5sbks%3D"
+      },
       {
         "id": "asset_wgu4nggf",
         "kind": "image",

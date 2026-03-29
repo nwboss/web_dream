@@ -14,8 +14,8 @@ type StandaloneImageStudioProps = {
 
 const aspectRatios: Shot["aspectRatio"][] = ["9:16", "16:9", "1:1"];
 const models = [
-  { value: "jimeng-4.6", label: "图片4.6", hint: "默认推荐" },
-  { value: "jimeng-3.1", label: "文生图3.1", hint: "风格更稳" }
+  { value: "jimeng-4.6", label: "图片4.6" },
+  { value: "jimeng-3.1", label: "文生图3.1" }
 ] as const;
 const styles = [
   { value: "国漫", label: "国漫" },
@@ -130,8 +130,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         <div className="workspace-block-head">
           <div>
             <span className="pill">独立图片生成</span>
-            <h2>这里不依赖项目，直接出图</h2>
-            <p className="muted">先把图片生成功能独立出来。你可以直接写提示词、选比例、生成，再决定是否加入项目。</p>
+            <h2>图片生成</h2>
           </div>
           <button className="btn btn-primary" type="submit" disabled={isPending}>
             {isPending ? "生成中..." : "开始生成图片"}
@@ -155,7 +154,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                   onClick={() => setSelectedModel(model.value)}
                 >
                   <strong>{model.label}</strong>
-                  <span>{model.hint}</span>
                 </button>
               ))}
             </div>
@@ -172,7 +170,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                   onClick={() => setSelectedAspectRatio(ratio)}
                 >
                   <strong>{ratio}</strong>
-                  <span>{ratio === "9:16" ? "竖屏故事" : ratio === "16:9" ? "横版镜头" : "封面方图"}</span>
                 </button>
               ))}
             </div>
@@ -199,13 +196,13 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
             </button>
             <input ref={fileInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUpload} />
             <p className="muted studio-file-name" title={referenceImage?.title}>
-              {referenceImage ? `当前参考图：${referenceImage.title}` : "点击上传参考图，后续可用于图生图。"}
+              {referenceImage ? referenceImage.title : "点击上传"}
             </p>
           </div>
 
           <div className="field studio-prompt-card">
             <label htmlFor="prompt">提示词</label>
-            <textarea id="prompt" name="prompt" rows={6} placeholder="输入文字，描述你想生成的图片。这里先走独立图片生成，不依赖项目分镜。" required />
+            <textarea id="prompt" name="prompt" rows={6} placeholder="输入文字，描述你想生成的图片。" required />
             <div className="studio-style-strip">
               {styles.map((style) => (
                 <button
@@ -222,7 +219,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         </div>
 
         <div className={`form-message ${message ? "success" : ""}`}>
-          {message || (referenceImage ? "当前已启用参考图，生成时将优先走图生图链路。" : latestJob ? `最近任务：${latestJob.message}` : "先生成你的第一张图。")}
+          {message || (latestJob ? latestJob.message : "")}
         </div>
       </form>
 
@@ -230,8 +227,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         <div className="workspace-block-head">
           <div>
             <span className="pill">图片结果</span>
-            <h2>独立图片结果区</h2>
-            {assets.length ? <p className="muted">共 {assets.length} 张图片，点击下方缩略图可切换主预览。</p> : null}
+            <h2>结果</h2>
           </div>
         </div>
 
@@ -253,7 +249,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
           </article>
         ) : (
           <div className="studio-empty-result">
-            <p className="muted">这里会展示独立图片生成结果。</p>
+            <p className="muted">暂无结果</p>
           </div>
         )}
 
