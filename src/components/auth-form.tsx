@@ -11,7 +11,7 @@ type AuthFormProps = {
   mode: AuthMode;
 };
 
-type AppRedirect = "/" | "/dashboard" | "/login" | "/register" | "/forgot-password" | "/account";
+type AppRedirect = "/" | "/dashboard" | "/studio/images" | "/projects" | "/login" | "/register" | "/forgot-password" | "/account";
 
 const copy: Record<AuthMode, { title: string; subtitle: string; endpoint: string; button: string }> = {
   login: {

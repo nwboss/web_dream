@@ -46,6 +46,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     message: "注册成功，欢迎来到即梦漫剧工坊。",
-    redirectTo: "/dashboard"
+    redirectTo: "/studio/images"
   });
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import type { Route } from "next";
 
 import { AUTH_COOKIE, parseSessionToken } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
@@ -25,8 +26,11 @@ export async function SiteHeader() {
           </Link>
           {session ? (
             <>
-              <Link className="nav-link" href="/dashboard">
-                控制台
+              <Link className="nav-link" href={"/studio/images" as Route}>
+                创作台
+              </Link>
+              <Link className="nav-link" href={"/projects" as Route}>
+                我的项目
               </Link>
               <Link className="nav-link" href="/account">
                 账户中心

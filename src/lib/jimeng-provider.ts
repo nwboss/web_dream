@@ -9,6 +9,11 @@ type ProviderImageResult = {
   raw?: unknown;
 };
 
+type ImageGenerationInput = {
+  shot: Shot;
+  referenceImageBase64?: string;
+};
+
 function getEnv(name: string) {
   return process.env[name]?.trim() || "";
 }
@@ -218,7 +223,8 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function generateJimengImageOfficial(shot: Shot): Promise<ProviderImageResult> {
+async function generateJimengImageOfficial(input: ImageGenerationInput): Promise<ProviderImageResult> {
+  const { shot, referenceImageBase64 } = input;
   const widthHeightMap: Record<Shot["aspectRatio"], { width: number; height: number }> = {
     "1:1": { width: 1328, height: 1328 },
     "16:9": { width: 1664, height: 936 },
@@ -227,12 +233,13 @@ async function generateJimengImageOfficial(shot: Shot): Promise<ProviderImageRes
 
   const size = widthHeightMap[shot.aspectRatio];
   const submitBody = {
-    req_key: "jimeng_t2i_v31",
+    req_key: referenceImageBase64 ? "jimeng_i2i_v30" : "jimeng_t2i_v31",
     prompt: shot.prompt || shot.description || shot.title,
     use_pre_llm: true,
     seed: -1,
     width: size.width,
-    height: size.height
+    height: size.height,
+    ...(referenceImageBase64 ? { binary_data_base64: [referenceImageBase64], scale: 0.5 } : {})
   };
 
   const submitResult = await callVisualApi("CVSync2AsyncSubmitTask", submitBody);
@@ -248,8 +255,8 @@ async function generateJimengImageOfficial(shot: Shot): Promise<ProviderImageRes
     };
   }
 
-  const maxAttempts = Number.parseInt(getEnv("JIMENG_POLL_MAX_ATTEMPTS") || "10", 10);
-  const pollIntervalMs = Number.parseInt(getEnv("JIMENG_POLL_INTERVAL_MS") || "1500", 10);
+  const maxAttempts = Number.parseInt(getEnv("JIMENG_POLL_MAX_ATTEMPTS") || "40", 10);
+  const pollIntervalMs = Number.parseInt(getEnv("JIMENG_POLL_INTERVAL_MS") || "2000", 10);
   const reqJson = JSON.stringify({
     return_url: true,
     logo_info: {
@@ -262,7 +269,7 @@ async function generateJimengImageOfficial(shot: Shot): Promise<ProviderImageRes
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const pollResult = await callVisualApi("CVSync2AsyncGetResult", {
-      req_key: "jimeng_t2i_v31",
+      req_key: referenceImageBase64 ? "jimeng_i2i_v30" : "jimeng_t2i_v31",
       task_id: submitPayload.data.task_id,
       req_json: reqJson
     });
@@ -314,11 +321,12 @@ async function generateJimengImageOfficial(shot: Shot): Promise<ProviderImageRes
 
   return {
     ok: false,
-    providerMessage: "Jimeng polling timed out before task completed."
+    providerMessage: `Jimeng polling timed out before task completed. waited about ${Math.round((maxAttempts * pollIntervalMs) / 1000)}s.`
   };
 }
 
-async function generateJimengImageGeneric(shot: Shot): Promise<ProviderImageResult> {
+async function generateJimengImageGeneric(input: ImageGenerationInput): Promise<ProviderImageResult> {
+  const { shot, referenceImageBase64 } = input;
   const endpoint = getEnv("JIMENG_IMAGE_ENDPOINT");
   const apiKey = getEnv("JIMENG_API_KEY");
   const model = getEnv("JIMENG_IMAGE_MODEL") || "jimeng-3.1";
@@ -328,7 +336,8 @@ async function generateJimengImageGeneric(shot: Shot): Promise<ProviderImageResu
     model,
     prompt,
     size: mapAspectRatioToSize(shot.aspectRatio),
-    aspect_ratio: shot.aspectRatio
+    aspect_ratio: shot.aspectRatio,
+    ...(referenceImageBase64 ? { binary_data_base64: [referenceImageBase64] } : {})
   };
 
   const response = await fetch(endpoint, {
@@ -375,7 +384,7 @@ async function generateJimengImageGeneric(shot: Shot): Promise<ProviderImageResu
   };
 }
 
-export async function generateJimengImage(shot: Shot): Promise<ProviderImageResult> {
+export async function generateJimengImage(shot: Shot, referenceImageBase64?: string): Promise<ProviderImageResult> {
   if (!isRealMode()) {
     return {
       ok: false,
@@ -383,9 +392,14 @@ export async function generateJimengImage(shot: Shot): Promise<ProviderImageResu
     };
   }
 
+  const input: ImageGenerationInput = {
+    shot,
+    referenceImageBase64
+  };
+
   if (hasOfficialVisualConfig()) {
-    return generateJimengImageOfficial(shot);
+    return generateJimengImageOfficial(input);
   }
 
-  return generateJimengImageGeneric(shot);
+  return generateJimengImageGeneric(input);
 }

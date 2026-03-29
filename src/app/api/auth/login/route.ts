@@ -41,6 +41,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     message: "登录成功，正在进入工作台。",
-    redirectTo: "/dashboard"
+    redirectTo: "/studio/images"
   });
 }

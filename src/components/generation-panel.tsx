@@ -1,22 +1,57 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import type { Shot } from "@/lib/project-store";
 
 type GenerationPanelProps = {
   projectId: string;
   shot: Shot;
+  defaultMode?: StudioMode;
+  showModeTabs?: boolean;
+  title?: string;
+  description?: string;
 };
 
-export function GenerationPanel({ projectId, shot }: GenerationPanelProps) {
+type StudioMode = "image" | "video";
+
+function getAspectSummary(aspectRatio: Shot["aspectRatio"]) {
+  switch (aspectRatio) {
+    case "16:9":
+      return "16:9 · 高清 2K";
+    case "1:1":
+      return "1:1 · 标准封面";
+    case "9:16":
+    default:
+      return "9:16 · 竖屏故事";
+  }
+}
+
+export function GenerationPanel({
+  projectId,
+  shot,
+  defaultMode = "image",
+  showModeTabs = true,
+  title,
+  description
+}: GenerationPanelProps) {
   const router = useRouter();
+  const [mode, setMode] = useState<StudioMode>(defaultMode);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
-  const latestAsset = shot.assets[0];
-  const latestJob = shot.jobs[0];
-  const isWaiting = latestJob?.status === "queued" || latestJob?.status === "processing";
+  const latestImageAsset = useMemo(() => shot.assets.find((asset) => asset.kind === "image") || null, [shot.assets]);
+  const latestVideoAsset = useMemo(() => shot.assets.find((asset) => asset.kind === "video") || null, [shot.assets]);
+  const latestImageJob = useMemo(() => shot.jobs.find((job) => job.kind === "image") || null, [shot.jobs]);
+  const latestVideoJob = useMemo(() => shot.jobs.find((job) => job.kind === "video") || null, [shot.jobs]);
+  const currentJob = mode === "image" ? latestImageJob : latestVideoJob;
+  const currentAsset = mode === "image" ? latestImageAsset : latestVideoAsset;
+  const currentAssets = shot.assets.filter((asset) => asset.kind === mode);
+  const isWaiting = currentJob?.status === "queued" || currentJob?.status === "processing";
+
+  useEffect(() => {
+    setMode(defaultMode);
+  }, [defaultMode]);
 
   useEffect(() => {
     if (!isWaiting) {
@@ -30,7 +65,7 @@ export function GenerationPanel({ projectId, shot }: GenerationPanelProps) {
     return () => window.clearInterval(timer);
   }, [isWaiting, router]);
 
-  function run(kind: "image" | "video") {
+  function run(kind: StudioMode) {
     startTransition(async () => {
       setMessage("");
       const response = await fetch(`/api/projects/${projectId}/shots/${shot.id}/generate-${kind}`, {
@@ -46,101 +81,129 @@ export function GenerationPanel({ projectId, shot }: GenerationPanelProps) {
       setMessage(
         kind === "image"
           ? data.queued
-            ? "图片任务已入队，正在后台生成并保存到本地。"
-            : "已生成新的图片候选。"
-          : "已生成新的视频片段。"
+            ? "图片任务已入队，正在后台生成。"
+            : "图片已生成。"
+          : "视频入口已切换，当前仍以前置 MVP 流程为主。"
       );
       router.refresh();
     });
   }
 
   return (
-    <div className="asset-placeholder">
-      <div className="asset-card">
-        <span className="pill">最小生成 MVP</span>
-        <h3>当前分镜生成面板</h3>
-        <p>图片会优先走真实即梦 Provider，视频暂时仍为 mock 结果。每次成功后会把素材写回当前分镜。</p>
-        <div className="job-list" style={{ marginTop: 16 }}>
-          <div className="job-row">
-            <strong>素材总数</strong>
-            <span>{shot.assets.length} 个</span>
-          </div>
-          <div className="job-row">
-            <strong>最近任务</strong>
-            <span>{latestJob ? `${latestJob.message} · ${latestJob.status}` : "还没有生成记录"}</span>
-          </div>
-          <div className="job-row">
-            <strong>最近素材</strong>
-            <span>{latestAsset ? `${latestAsset.title} · ${latestAsset.source === "jimeng" ? "Jimeng" : "Mock"}` : "还没有素材"}</span>
-          </div>
-        </div>
-        <div className="inline-actions" style={{ marginTop: 16 }}>
-          <button className="btn btn-primary" type="button" disabled={isPending} onClick={() => run("image")}>
-            {isPending ? "生成中..." : "生成图片"}
-          </button>
-          <button className="btn btn-secondary" type="button" disabled={isPending} onClick={() => run("video")}>
-            {isPending ? "生成中..." : "生成视频"}
-          </button>
-        </div>
-        <div className={`form-message ${message ? "success" : ""}`}>
-          {message || (isWaiting ? "任务处理中，面板会自动刷新。" : "生成完成后会自动刷新当前分镜结果。")}
+    <section className="panel studio-panel">
+      <div className="workspace-block-head">
+        <div>
+          <span className="pill">生成模块</span>
+          <h2>{title || "先做图片，再切视频"}</h2>
+          <p className="muted">{description || "按即梦的操作习惯把生成能力拆开。默认先走图片，视频通过顶部切换进入。"}</p>
         </div>
       </div>
 
-      <div className="asset-card">
-        <span className="pill">任务记录</span>
-        <h3>最近任务</h3>
-        {shot.jobs.length ? (
-          <div className="job-list">
-            {shot.jobs.map((job) => (
-              <div className="job-row" key={job.id}>
-                <strong>{job.kind === "image" ? "图片任务" : "视频任务"}</strong>
-                <span>{job.status}</span>
-                <small>{new Date(job.createdAt).toLocaleString("zh-CN")}</small>
-              </div>
-            ))}
+      {showModeTabs ? (
+        <div className="studio-tabs">
+          <button className={`studio-tab ${mode === "image" ? "is-active" : ""}`} type="button" onClick={() => setMode("image")}>
+            图片生成
+          </button>
+          <button className={`studio-tab ${mode === "video" ? "is-active" : ""}`} type="button" onClick={() => setMode("video")}>
+            视频生成
+          </button>
+        </div>
+      ) : null}
+
+      {mode === "image" ? (
+        <div className="studio-mode-card">
+          <div className="studio-toolbar">
+            <div className="studio-tool-chip is-primary">图片生成</div>
+            <div className="studio-tool-chip">图片4.6</div>
+            <div className="studio-tool-chip">{getAspectSummary(shot.aspectRatio)}</div>
           </div>
+
+          <div className="studio-actions">
+            <button className="btn btn-primary" type="button" disabled={isPending} onClick={() => run("image")}>
+              {isPending ? "提交中..." : "开始生成图片"}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={() => setMode("video")}>
+              切到视频
+            </button>
+          </div>
+
+          <div className={`form-message ${message ? "success" : ""}`}>
+            {message || (isWaiting ? "图片任务处理中，结果会自动刷新。" : "图片生成结果会优先展示在下面。")}
+          </div>
+        </div>
+      ) : (
+        <div className="studio-mode-card">
+          <div className="studio-toolbar">
+            <div className="studio-tool-chip is-primary">视频生成</div>
+            <div className="studio-tool-chip">先复用当前分镜提示词</div>
+            <div className="studio-tool-chip">建议先选好图片版本</div>
+          </div>
+
+          <div className="studio-actions">
+            <button className="btn btn-primary" type="button" disabled={isPending} onClick={() => run("video")}>
+              {isPending ? "提交中..." : "生成视频"}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={() => setMode("image")}>
+              返回图片
+            </button>
+          </div>
+
+          <div className={`form-message ${message ? "success" : ""}`}>
+            {message || "视频模块先保留切换入口，等图片体验稳定后再继续强化。"}
+          </div>
+        </div>
+      )}
+
+      <div className="studio-result-panel">
+        <div className="studio-result-head">
+          <div>
+            <span className="pill">{mode === "image" ? "图片结果" : "视频结果"}</span>
+            <h3>{mode === "image" ? "当前图片输出" : "当前视频输出"}</h3>
+          </div>
+          <div className="studio-result-meta">
+            <span>{currentAssets.length} 个结果</span>
+            <span>{currentJob ? currentJob.status : "尚未生成"}</span>
+          </div>
+        </div>
+
+        {currentAsset ? (
+          <article className="studio-hero-result">
+            <img className="result-preview" src={currentAsset.previewUrl} alt={currentAsset.title} />
+            <div className="result-meta">
+              <strong>{currentAsset.title}</strong>
+              <span>
+                {currentAsset.source === "jimeng" ? "即梦生成" : "Mock 结果"} · {new Date(currentAsset.createdAt).toLocaleString("zh-CN")}
+              </span>
+              {currentAsset.originalUrl ? (
+                <a className="nav-link" href={currentAsset.originalUrl} target="_blank" rel="noreferrer">
+                  查看即梦原图
+                </a>
+              ) : null}
+              <a className="nav-link" href={currentAsset.previewUrl} target="_blank" rel="noreferrer">
+                打开本地素材
+              </a>
+            </div>
+          </article>
         ) : (
-          <p className="muted">还没有发起生成任务。</p>
+          <div className="studio-empty-result">
+            <p className="muted">{mode === "image" ? "先生成第一张图，结果会显示在这里。" : "先切到视频并生成，结果会显示在这里。"}</p>
+          </div>
         )}
-      </div>
 
-      <div className="asset-card">
-        <span className="pill">素材结果</span>
-        <h3>当前分镜素材</h3>
-        {latestAsset ? (
-          <p className="muted">
-            最近素材：{latestAsset.title} · {latestAsset.source === "jimeng" ? "Jimeng" : "Mock"} ·{" "}
-            {new Date(latestAsset.createdAt).toLocaleString("zh-CN")}
-          </p>
-        ) : null}
-        {shot.assets.length ? (
-          <div className="asset-list">
-            {shot.assets.map((asset) => (
+        {currentAssets.length > 1 ? (
+          <div className="studio-result-grid">
+            {currentAssets.slice(1).map((asset) => (
               <article className="result-card" key={asset.id}>
                 <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
                 <div className="result-meta">
                   <strong>{asset.title}</strong>
-                  <span>
-                    {asset.kind === "image" ? "图片素材" : `视频片段 · ${asset.durationSec || 0}s`} · {asset.source === "jimeng" ? "Jimeng" : "Mock"}
-                  </span>
                   <small>{new Date(asset.createdAt).toLocaleString("zh-CN")}</small>
-                  {asset.originalUrl ? (
-                    <a className="nav-link" href={asset.originalUrl} target="_blank" rel="noreferrer">
-                      查看即梦原图链接
-                    </a>
-                  ) : null}
-                  <a className="nav-link" href={asset.previewUrl} target="_blank" rel="noreferrer">
-                    打开本地素材
-                  </a>
                 </div>
               </article>
             ))}
           </div>
-        ) : (
-          <p className="muted">这里会展示这个分镜生成出来的图片和视频结果。</p>
-        )}
+        ) : null}
       </div>
-    </div>
+    </section>
   );
 }

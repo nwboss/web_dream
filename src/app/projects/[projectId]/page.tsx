@@ -1,9 +1,11 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { notFound } from "next/navigation";
 
 import { GenerationPanel } from "@/components/generation-panel";
 import { ProjectActions } from "@/components/project-actions";
 import { ShotEditor } from "@/components/shot-editor";
+import { StudioModuleNav } from "@/components/studio-module-nav";
 import { getProject, getProjectStats } from "@/lib/project-store";
 import { requireSession } from "@/lib/session";
 
@@ -15,8 +17,19 @@ type ProjectPageProps = {
   }>;
   searchParams: Promise<{
     shot?: string;
+    module?: string;
   }>;
 };
+
+type WorkspaceModule = "image" | "video" | "project";
+
+function normalizeModule(value: string | undefined): WorkspaceModule {
+  if (value === "video" || value === "project") {
+    return value;
+  }
+
+  return "image";
+}
 
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const session = await requireSession();
@@ -30,6 +43,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   const selectedShotId = resolvedSearchParams.shot;
+  const activeModule = normalizeModule(resolvedSearchParams.module);
   const firstScene = project.scenes[0];
   const selectedScene = project.scenes.find((scene) => scene.shots.some((shot) => shot.id === selectedShotId)) || firstScene;
   const selectedShot = selectedScene?.shots.find((shot) => shot.id === selectedShotId) || selectedScene?.shots[0] || null;
@@ -54,27 +68,14 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         </div>
       </div>
 
-      <section className="workspace-metrics">
-        <article className="metric">
-          <strong>{stats.sceneCount}</strong>
-          <span>场次数</span>
-        </article>
-        <article className="metric">
-          <strong>{stats.shotCount}</strong>
-          <span>分镜总数</span>
-        </article>
-        <article className="metric">
-          <strong>{stats.readyCount}</strong>
-          <span>可进入生成阶段</span>
-        </article>
-      </section>
-
       <section className="workspace-grid">
         <aside className="workspace-sidebar panel">
           <div className="workspace-block-head">
             <div>
               <h2>场次结构</h2>
-              <p className="muted">先把内容结构排清楚，再进入即梦生成。</p>
+              <p className="muted">
+                {stats.sceneCount} 个场次 · {stats.shotCount} 个分镜 · {stats.readyCount} 个可生成
+              </p>
             </div>
             {selectedScene ? <ProjectActions projectId={project.id} sceneId={selectedScene.id} /> : null}
           </div>
@@ -108,9 +109,53 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
           </div>
         </aside>
 
-        <section className="workspace-main">
+        <section className="workspace-main workspace-main-stack">
           {selectedShot ? (
-            <ShotEditor projectId={project.id} shot={selectedShot} />
+            <div className="panel workspace-module-shell">
+              <div className="workspace-module-head">
+                <div>
+                  <span className="pill">三模块工作台</span>
+                  <h2>{project.title}</h2>
+                  <p className="muted">先在图片模块出图，再切到视频，最后在漫剧项目模块里组织成片。</p>
+                </div>
+                <div className="workspace-module-tabs">
+                  <StudioModuleNav active="project" projectId={project.id} shotId={selectedShot.id} />
+                </div>
+              </div>
+
+              {activeModule === "image" ? (
+                <div className="workspace-empty">
+                  <h2>图片生成已独立出去</h2>
+                  <p className="muted">图片生成功能现在不依赖项目，已经移动到独立图片模块。你可以先在那里生成，再回来把结果纳入漫剧项目。</p>
+                  <Link className="btn btn-primary" href={"/studio/images" as Route}>
+                    去独立图片生成
+                  </Link>
+                </div>
+              ) : null}
+
+              {activeModule === "video" ? (
+                <div className="workspace-empty">
+                  <h2>视频生成已独立出去</h2>
+                  <p className="muted">视频生成现在不依赖项目，已经移动到独立视频模块。你可以先在那里生成片段，再回来挂到当前分镜。</p>
+                  <Link className="btn btn-primary" href={"/studio/videos" as Route}>
+                    去独立视频生成
+                  </Link>
+                </div>
+              ) : null}
+
+              {activeModule === "project" ? (
+                <div className="workspace-project-grid">
+                  <ShotEditor projectId={project.id} shot={selectedShot} variant="project" />
+                  <GenerationPanel
+                    projectId={project.id}
+                    shot={selectedShot}
+                    showModeTabs={true}
+                    title="项目驱动的漫剧生成"
+                    description="这里是生产台。图片和视频结果会在这里统一挂到当前分镜，方便做版本管理和连续创作。"
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="panel workspace-empty">
               <h2>先添加一个分镜</h2>
@@ -118,17 +163,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             </div>
           )}
         </section>
-
-        <aside className="workspace-right panel">
-          <div className="workspace-block-head">
-            <div>
-              <h2>生成结果区</h2>
-              <p className="muted">最小 MVP 先用 mock 任务打通结果闭环，后续直接替换成即梦图片 / 视频生成。</p>
-            </div>
-          </div>
-
-          {selectedShot ? <GenerationPanel projectId={project.id} shot={selectedShot} /> : null}
-        </aside>
       </section>
     </main>
   );

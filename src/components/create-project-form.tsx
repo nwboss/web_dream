@@ -39,7 +39,7 @@ export function CreateProjectForm() {
   return (
     <form className="dashboard-card" onSubmit={handleSubmit}>
       <h3>新建项目</h3>
-      <p>先从一个项目标题、题材和故事 premise 开始，后面再进入分镜工作台细化。</p>
+      <p>这里只负责漫剧项目，不承接单次图片或视频生成。</p>
 
       <div className="field">
         <label htmlFor="title">项目标题</label>
@@ -53,7 +53,7 @@ export function CreateProjectForm() {
 
       <div className="field">
         <label htmlFor="premise">故事简介</label>
-        <textarea id="premise" name="premise" placeholder="一句话写清主角、冲突和情绪方向。" rows={4} required />
+        <textarea id="premise" name="premise" placeholder="一句话写清主角、冲突和情绪方向。" rows={3} required />
       </div>
 
       <div className="form-message error">{message}</div>

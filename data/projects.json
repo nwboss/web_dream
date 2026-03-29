@@ -1,0 +1,61 @@
+{
+  "1670867932@qq.com": [
+    {
+      "id": "project_xouclqta",
+      "ownerEmail": "1670867932@qq.com",
+      "title": "逆光重启",
+      "premise": "一个被误解的高中生，在一次意外后看见了改变命运的缝隙。",
+      "genre": "都市校园 / 悬念",
+      "updatedAt": "2026-03-29T02:34:07.528Z",
+      "scenes": [
+        {
+          "id": "scene_t0ecuqoa",
+          "title": "Scene 01 开场坠点",
+          "sortOrder": 1,
+          "shots": [
+            {
+              "id": "shot_34q91b5x",
+              "title": "天台对峙",
+              "description": "少年在风雨中的天台边缘停下脚步，第一次直面命运。",
+              "prompt": "黑发少年站在暴雨夜天台边缘，城市霓虹，电影感国漫，中景，压迫感",
+              "status": "draft",
+              "aspectRatio": "9:16",
+              "updatedAt": "2026-03-29T02:34:07.528Z",
+              "jobs": [],
+              "assets": []
+            },
+            {
+              "id": "shot_5jm4npf8",
+              "title": "回头一瞬",
+              "description": "女主在楼梯口回头，看见少年消失在雨幕中。",
+              "prompt": "短发少女回头，楼梯口冷光，细腻笔触，情绪拉满，近景",
+              "status": "ready",
+              "aspectRatio": "9:16",
+              "updatedAt": "2026-03-29T02:34:07.528Z",
+              "jobs": [],
+              "assets": []
+            }
+          ]
+        },
+        {
+          "id": "scene_w7vgkoc8",
+          "title": "Scene 02 命运交汇",
+          "sortOrder": 2,
+          "shots": [
+            {
+              "id": "shot_00vwj7ol",
+              "title": "旧巷初遇",
+              "description": "旧巷积水倒映霓虹，两人第一次正面相遇。",
+              "prompt": "旧巷霓虹反光，两位高中生对视，氛围感国漫，广角构图",
+              "status": "done",
+              "aspectRatio": "16:9",
+              "updatedAt": "2026-03-29T02:34:07.528Z",
+              "jobs": [],
+              "assets": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
