@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE, parseSessionToken } from "@/lib/auth";
 
 const mockQuota = [
-  { label: "免费图片次数", value: "20 / 月" },
-  { label: "免费视频次数", value: "5 / 月" },
-  { label: "当前计划", value: "Free Starter" }
+  { label: "图片额度", value: "20 / 月" },
+  { label: "视频额度", value: "5 / 月" },
+  { label: "当前计划", value: "免费版" }
 ];
 
 export default async function AccountPage() {
@@ -21,9 +21,7 @@ export default async function AccountPage() {
     <main className="shell account-layout">
       <div className="account-hero">
         <div>
-          <span className="pill">账户中心</span>
-          <h1 className="account-title">你的创作资产入口已经就位</h1>
-          <p className="muted">这版先把 To C 项目最重要的账户骨架搭起来，后面会继续接真实用户信息、额度消耗、订单和订阅。</p>
+          <h1 className="account-title">账户中心</h1>
         </div>
       </div>
 
@@ -35,7 +33,7 @@ export default async function AccountPage() {
         </article>
 
         <article className="account-card">
-          <h3>配额占位</h3>
+          <h3>使用额度</h3>
           <ul className="list">
             {mockQuota.map((item) => (
               <li key={item.label}>
@@ -46,12 +44,11 @@ export default async function AccountPage() {
         </article>
 
         <article className="account-card">
-          <h3>后续迭代入口</h3>
+          <h3>更多功能</h3>
           <ul className="list">
             <li>我的项目</li>
             <li>使用记录</li>
-            <li>订阅与订单</li>
-            <li>通知和风控记录</li>
+            <li>订阅管理</li>
           </ul>
         </article>
       </section>

@@ -2,6 +2,20 @@
   "1670867932@qq.com": {
     "imageJobs": [
       {
+        "id": "job_skpqby22",
+        "kind": "image",
+        "status": "succeeded",
+        "createdAt": "2026-05-07T05:05:49.407Z",
+        "message": "已完成独立图片生成"
+      },
+      {
+        "id": "job_o83hwfkk",
+        "kind": "image",
+        "status": "failed",
+        "createdAt": "2026-05-07T05:03:54.050Z",
+        "message": "fetch failed"
+      },
+      {
         "id": "job_c34v2hk4",
         "kind": "image",
         "status": "succeeded",
@@ -39,6 +53,17 @@
     ],
     "imageAssets": [
       {
+        "id": "asset_4usy359p",
+        "kind": "image",
+        "title": "独立图片结果",
+        "prompt": "中国超人",
+        "previewUrl": "/api/studio/assets/asset_4usy359p",
+        "createdAt": "2026-05-07T05:05:59.108Z",
+        "source": "jimeng",
+        "storagePath": "asset_4usy359p.jpg",
+        "originalUrl": "https://p3-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/2026050713055853756A35BEC6F6C9DC70-9201-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1778216758&x-signature=GkIem8QNw1ZtZgefLIxRhv0CTfQ%3D"
+      },
+      {
         "id": "asset_k70bynjh",
         "kind": "image",
         "title": "奥特曼",
@@ -70,6 +95,33 @@
         "source": "jimeng",
         "storagePath": "asset_fdc1qxb5.jpg",
         "originalUrl": "https://p9-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/20260329111021A5712A62CFB5FC10C82C-7645-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1774840222&x-signature=16q2spxDfj%2FoRcDJy2ZDaZ8JUIQ%3D"
+      }
+    ],
+    "videoJobs": [],
+    "videoAssets": [],
+    "referenceImage": null
+  },
+  "test@test.com": {
+    "imageJobs": [
+      {
+        "id": "job_2peq80w7",
+        "kind": "image",
+        "status": "succeeded",
+        "createdAt": "2026-05-07T05:05:00.394Z",
+        "message": "已完成独立图片生成"
+      }
+    ],
+    "imageAssets": [
+      {
+        "id": "asset_nygbgz0d",
+        "kind": "image",
+        "title": "测试图片",
+        "prompt": "一只可爱的猫咪",
+        "previewUrl": "/api/studio/assets/asset_nygbgz0d",
+        "createdAt": "2026-05-07T05:05:10.067Z",
+        "source": "jimeng",
+        "storagePath": "asset_nygbgz0d.jpg",
+        "originalUrl": "https://p26-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/20260507130509AB031252490E905D8816-1065-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1778216709&x-signature=jIkPt%2FfhlIMYJ9Yow%2BmYAwZjHcg%3D"
       }
     ],
     "videoJobs": [],

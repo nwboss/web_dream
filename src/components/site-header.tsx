@@ -18,32 +18,29 @@ export async function SiteHeader() {
         </Link>
 
         <nav className="nav">
-          <Link className="nav-link" href="/#features">
-            产品能力
-          </Link>
-          <Link className="nav-link" href="/#templates">
-            模板体验
-          </Link>
           {session ? (
             <>
               <Link className="nav-link" href={"/studio/images" as Route}>
-                创作台
+                工作台
               </Link>
               <Link className="nav-link" href={"/projects" as Route}>
-                我的项目
+                项目
               </Link>
               <Link className="nav-link" href="/account">
-                账户中心
+                账户
               </Link>
               <LogoutButton />
             </>
           ) : (
             <>
+              <Link className="nav-link" href="/#features">
+                功能
+              </Link>
               <Link className="btn btn-secondary" href="/login">
                 登录
               </Link>
               <Link className="btn btn-primary" href="/register">
-                免费开始
+                注册
               </Link>
             </>
           )}

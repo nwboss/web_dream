@@ -12,16 +12,12 @@ type StandaloneImageStudioProps = {
   referenceImage: StudioReferenceImage | null;
 };
 
-const aspectRatios: Shot["aspectRatio"][] = ["9:16", "16:9", "1:1"];
-const models = [
-  { value: "jimeng-4.6", label: "图片4.6" },
-  { value: "jimeng-3.1", label: "文生图3.1" }
-] as const;
+const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
 const styles = [
   { value: "国漫", label: "国漫" },
-  { value: "电影感", label: "电影感" },
-  { value: "细腻笔触", label: "细腻笔触" },
-  { value: "悬疑氛围", label: "悬疑氛围" }
+  { value: "电影感", label: "电影" },
+  { value: "细腻", label: "细腻" },
+  { value: "悬疑", label: "悬疑" }
 ] as const;
 
 export function StandaloneImageStudio({ assets, jobs, referenceImage }: StandaloneImageStudioProps) {
@@ -29,7 +25,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>("9:16");
-  const [selectedModel, setSelectedModel] = useState<(typeof models)[number]["value"]>("jimeng-4.6");
   const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]["value"]>("国漫");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -63,7 +58,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         body: JSON.stringify({
           ...payload,
           aspectRatio: selectedAspectRatio,
-          model: selectedModel,
           stylePreset: selectedStyle
         })
       });
@@ -127,55 +121,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
   return (
     <div className="workspace-module-stack">
       <form className="workspace-editor panel studio-editor" onSubmit={handleSubmit}>
-        <div className="workspace-block-head">
-          <div>
-            <span className="pill">独立图片生成</span>
-            <h2>图片生成</h2>
-          </div>
-          <button className="btn btn-primary" type="submit" disabled={isPending}>
-            {isPending ? "生成中..." : "开始生成图片"}
-          </button>
-        </div>
-
-        <div className="studio-module-grid">
-          <div className="field studio-field-card">
-            <label htmlFor="title">图片标题</label>
-            <input id="title" name="title" defaultValue="独立图片结果" />
-          </div>
-
-          <div className="field studio-field-card">
-            <label>模型</label>
-            <div className="studio-chip-grid">
-              {models.map((model) => (
-                <button
-                  key={model.value}
-                  className={`studio-option-card ${selectedModel === model.value ? "is-active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedModel(model.value)}
-                >
-                  <strong>{model.label}</strong>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="field studio-field-card">
-            <label>尺寸与分辨率</label>
-            <div className="studio-chip-grid">
-              {aspectRatios.map((ratio) => (
-                <button
-                  key={ratio}
-                  className={`studio-option-card ${selectedAspectRatio === ratio ? "is-active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedAspectRatio(ratio)}
-                >
-                  <strong>{ratio}</strong>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div className="studio-compose-grid">
           <div className="studio-reference-card">
             <div className="studio-reference-head">
@@ -201,50 +146,57 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
           </div>
 
           <div className="field studio-prompt-card">
-            <label htmlFor="prompt">提示词</label>
-            <textarea id="prompt" name="prompt" rows={6} placeholder="输入文字，描述你想生成的图片。" required />
-            <div className="studio-style-strip">
-              {styles.map((style) => (
-                <button
-                  key={style.value}
-                  className={`studio-style-pill ${selectedStyle === style.value ? "is-active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedStyle(style.value)}
-                >
-                  {style.label}
-                </button>
-              ))}
+            <textarea id="prompt" name="prompt" rows={6} placeholder="描述你想生成的图片..." required />
+            <div className="studio-controls-row">
+              <div className="studio-chip-group">
+                {aspectRatios.map((ratio) => (
+                  <button
+                    key={ratio}
+                    className={`studio-chip ${selectedAspectRatio === ratio ? "is-active" : ""}`}
+                    type="button"
+                    onClick={() => setSelectedAspectRatio(ratio)}
+                  >
+                    {ratio}
+                  </button>
+                ))}
+              </div>
+              <div className="studio-chip-group">
+                {styles.map((style) => (
+                  <button
+                    key={style.value}
+                    className={`studio-chip ${selectedStyle === style.value ? "is-active" : ""}`}
+                    type="button"
+                    onClick={() => setSelectedStyle(style.value)}
+                  >
+                    {style.label}
+                  </button>
+                ))}
+              </div>
+              <button className="btn btn-primary studio-submit-btn" type="submit" disabled={isPending}>
+                {isPending ? "生成中..." : "生成"}
+              </button>
             </div>
           </div>
         </div>
 
-        <div className={`form-message ${message ? "success" : ""}`}>
-          {message || (latestJob ? latestJob.message : "")}
-        </div>
+        {(message || latestJob?.message) && (
+          <div className={`form-message ${message ? "success" : ""}`}>
+            {message || latestJob.message}
+          </div>
+        )}
       </form>
 
       <section className="panel studio-panel">
-        <div className="workspace-block-head">
-          <div>
-            <span className="pill">图片结果</span>
-            <h2>结果</h2>
-          </div>
-        </div>
-
         {latestAsset ? (
           <article className="studio-hero-result">
             <img className="result-preview" src={latestAsset.previewUrl} alt={latestAsset.title} />
             <div className="result-meta">
-              <strong>{latestAsset.title}</strong>
-              <span>{latestAsset.source === "jimeng" ? "即梦生成" : "Mock"} · {new Date(latestAsset.createdAt).toLocaleString("zh-CN")}</span>
-              {latestAsset.originalUrl ? (
-                <a className="nav-link" href={latestAsset.originalUrl} target="_blank" rel="noreferrer">
-                  查看即梦原图
+              <span className="muted">{new Date(latestAsset.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              {latestAsset.originalUrl && (
+                <a className="result-link" href={latestAsset.originalUrl} target="_blank" rel="noreferrer">
+                  查看原图
                 </a>
-              ) : null}
-              <a className="nav-link" href={latestAsset.previewUrl} target="_blank" rel="noreferrer">
-                打开本地素材
-              </a>
+              )}
             </div>
           </article>
         ) : (
@@ -253,24 +205,20 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
           </div>
         )}
 
-        {assets.length > 1 ? (
+        {assets.length > 1 && (
           <div className="studio-result-grid">
             {assets.map((asset) => (
               <button
-                className={`result-card studio-result-select ${latestAsset?.id === asset.id ? "is-active" : ""}`}
+                className={`result-card ${latestAsset?.id === asset.id ? "is-active" : ""}`}
                 key={asset.id}
                 type="button"
                 onClick={() => setSelectedAssetId(asset.id)}
               >
                 <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
-                <div className="result-meta">
-                  <strong>{asset.title}</strong>
-                  <small>{new Date(asset.createdAt).toLocaleString("zh-CN")}</small>
-                </div>
               </button>
             ))}
           </div>
-        ) : null}
+        )}
       </section>
     </div>
   );

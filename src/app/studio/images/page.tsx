@@ -14,23 +14,13 @@ export default async function ImageStudioPage() {
   return (
     <main className="shell workspace-layout">
       <div className="workspace-topbar">
-        <div>
-          <h1 className="dashboard-title">图片生成</h1>
-        </div>
-
-        <div className="inline-actions">
-          <Link className="btn btn-ghost" href="/account">
-            账户中心
-          </Link>
-        </div>
+        <StudioModuleNav active="image" />
+        <Link className="btn btn-ghost" href="/account">
+          账户
+        </Link>
       </div>
 
       <div className="panel workspace-module-shell">
-        <div className="workspace-module-head">
-          <div />
-          <StudioModuleNav active="image" />
-        </div>
-
         <StandaloneImageStudio assets={state.imageAssets} jobs={state.imageJobs} referenceImage={state.referenceImage} />
       </div>
     </main>

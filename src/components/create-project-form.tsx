@@ -39,26 +39,25 @@ export function CreateProjectForm() {
   return (
     <form className="dashboard-card" onSubmit={handleSubmit}>
       <h3>新建项目</h3>
-      <p>这里只负责漫剧项目，不承接单次图片或视频生成。</p>
 
       <div className="field">
         <label htmlFor="title">项目标题</label>
-        <input id="title" name="title" placeholder="例如：逆光重启 第 1 集" required />
+        <input id="title" name="title" placeholder="项目名称" required />
       </div>
 
       <div className="field">
-        <label htmlFor="genre">题材标签</label>
+        <label htmlFor="genre">题材</label>
         <input id="genre" name="genre" placeholder="都市 / 校园 / 悬疑" required />
       </div>
 
       <div className="field">
-        <label htmlFor="premise">故事简介</label>
-        <textarea id="premise" name="premise" placeholder="一句话写清主角、冲突和情绪方向。" rows={3} required />
+        <label htmlFor="premise">简介</label>
+        <textarea id="premise" name="premise" placeholder="项目简介..." rows={3} required />
       </div>
 
-      <div className="form-message error">{message}</div>
+      {message && <div className="form-message error">{message}</div>}
       <button className="btn btn-primary" type="submit" disabled={isPending}>
-        {isPending ? "创建中..." : "创建并进入工作台"}
+        {isPending ? "创建中..." : "创建"}
       </button>
     </form>
   );

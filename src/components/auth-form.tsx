@@ -15,22 +15,22 @@ type AppRedirect = "/" | "/dashboard" | "/studio/images" | "/projects" | "/login
 
 const copy: Record<AuthMode, { title: string; subtitle: string; endpoint: string; button: string }> = {
   login: {
-    title: "欢迎回来",
-    subtitle: "登录后继续你的漫剧项目、素材和生成任务。",
+    title: "登录",
+    subtitle: "继续你的创作",
     endpoint: "/api/auth/login",
-    button: "登录并进入工作台"
+    button: "登录"
   },
   register: {
-    title: "创建你的创作账户",
-    subtitle: "注册后即可保存项目、管理额度，并开始第一部 AI 漫剧。",
+    title: "注册",
+    subtitle: "开始 AI 创作",
     endpoint: "/api/auth/register",
-    button: "注册并开始创作"
+    button: "注册"
   },
   "forgot-password": {
-    title: "找回登录方式",
-    subtitle: "首期先提供邮箱回执占位流程，方便后续接入真实验证码或重置邮件。",
+    title: "找回密码",
+    subtitle: "输入邮箱找回账户",
     endpoint: "/api/auth/forgot-password",
-    button: "发送找回说明"
+    button: "发送"
   }
 };
 
@@ -78,40 +78,41 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="auth-card">
-      <span className="pill">Sprint 1 / To C 登录体系</span>
       <h1>{content.title}</h1>
       <p className="muted">{content.subtitle}</p>
 
       <form onSubmit={handleSubmit}>
-        {mode !== "forgot-password" ? (
+        {mode === "register" && (
           <div className="field">
             <label htmlFor="name">昵称</label>
-            <input id="name" name="name" placeholder="输入你的创作者昵称" required={mode === "register"} />
+            <input id="name" name="name" placeholder="输入昵称" required />
           </div>
-        ) : null}
+        )}
 
         <div className="field">
           <label htmlFor="email">邮箱</label>
           <input id="email" name="email" type="email" placeholder="name@example.com" required />
         </div>
 
-        {mode !== "forgot-password" ? (
+        {mode !== "forgot-password" && (
           <div className="field">
             <label htmlFor="password">密码</label>
             <input
               id="password"
               name="password"
               type="password"
-              placeholder="至少 8 位，后续会接入真实加密存储"
+              placeholder="至少 8 位"
               required
               minLength={8}
             />
           </div>
-        ) : null}
+        )}
 
-        <div className={`form-message ${status === "idle" ? "" : status}`}>
-          {message || "当前为 Sprint 1 骨架版本，账户数据还未接入数据库持久化。"}
-        </div>
+        {message && (
+          <div className={`form-message ${status}`}>
+            {message}
+          </div>
+        )}
 
         <div className="auth-actions">
           <button className="btn btn-primary" type="submit" disabled={isPending}>
@@ -119,20 +120,26 @@ export function AuthForm({ mode }: AuthFormProps) {
           </button>
           {mode === "login" ? (
             <Link className="btn btn-secondary" href="/register">
-              去注册
+              注册
+            </Link>
+          ) : mode === "register" ? (
+            <Link className="btn btn-secondary" href="/login">
+              登录
             </Link>
           ) : (
             <Link className="btn btn-secondary" href="/login">
-              返回登录
+              返回
             </Link>
           )}
         </div>
       </form>
 
       <div className="inline-actions" style={{ marginTop: 16 }}>
-        <Link className="nav-link" href="/forgot-password">
-          忘记密码
-        </Link>
+        {mode === "login" && (
+          <Link className="nav-link" href="/forgot-password">
+            忘记密码
+          </Link>
+        )}
         <Link className="nav-link" href="/">
           返回首页
         </Link>

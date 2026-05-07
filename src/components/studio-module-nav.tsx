@@ -15,13 +15,13 @@ export function StudioModuleNav({ active, projectId, shotId }: StudioModuleNavPr
   return (
     <div className="workspace-module-tabs">
       <Link className={`workspace-module-tab ${active === "image" ? "is-active" : ""}`} href={"/studio/images" as Route}>
-        图片生成
+        图片
       </Link>
       <Link className={`workspace-module-tab ${active === "video" ? "is-active" : ""}`} href={"/studio/videos" as Route}>
-        视频生成
+        视频
       </Link>
       <Link className={`workspace-module-tab ${active === "project" ? "is-active" : ""}`} href={projectHref as Route}>
-        漫剧项目
+        项目
       </Link>
     </div>
   );
