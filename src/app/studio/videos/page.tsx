@@ -21,7 +21,12 @@ export default async function VideoStudioPage() {
       </div>
 
       <div className="panel workspace-module-shell">
-        <StandaloneVideoStudio assets={state.videoAssets} jobs={state.videoJobs} />
+        <StandaloneVideoStudio
+          assets={state.videoAssets}
+          jobs={state.videoJobs}
+          referenceImage={state.referenceImage}
+          referenceEndImage={state.referenceEndImage}
+        />
       </div>
     </main>
   );

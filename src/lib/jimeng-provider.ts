@@ -9,9 +9,25 @@ type ProviderImageResult = {
   raw?: unknown;
 };
 
+type ProviderVideoResult = {
+  ok: boolean;
+  videoUrl?: string;
+  providerMessage: string;
+  taskId?: string;
+  raw?: unknown;
+};
+
 type ImageGenerationInput = {
   shot: Shot;
   referenceImageBase64?: string;
+};
+
+type VideoGenerationInput = {
+  prompt: string;
+  referenceImageBase64?: string;
+  referenceEndImageBase64?: string;
+  duration?: number;
+  aspectRatio?: string;
 };
 
 function getEnv(name: string) {
@@ -402,4 +418,224 @@ export async function generateJimengImage(shot: Shot, referenceImageBase64?: str
   }
 
   return generateJimengImageGeneric(input);
+}
+
+export function isJimengRealVideoEnabled() {
+  return isRealMode();
+}
+
+async function generateJimengVideoOfficial(input: VideoGenerationInput): Promise<ProviderVideoResult> {
+  const { prompt, referenceImageBase64, referenceEndImageBase64, duration = 5, aspectRatio = "16:9" } = input;
+
+  // 根据时长计算帧数
+  // 根据火山引擎文档：frames = 24 * n + 1，其中n为秒数
+  // 5秒=121帧，10秒=241帧
+  const frames = duration === 10 ? 241 : 121;
+
+  // 确定req_key和binary_data
+  // 根据火山引擎文档：https://www.volcengine.com/docs/85621/1785204
+  let reqKey: string;
+  let binaryData: string[] | undefined;
+
+  if (referenceImageBase64 && referenceEndImageBase64) {
+    // 首尾模式：文档中未提及，暂不支持
+    console.warn("[Video Generation] First+Last frame mode is not documented");
+    return {
+      ok: false,
+      providerMessage: "首尾帧模式暂不支持，请使用文生视频或首帧模式。"
+    };
+  } else if (referenceImageBase64) {
+    // 首帧模式：jimeng_i2v_first_v30
+    reqKey = "jimeng_i2v_first_v30";
+    binaryData = [referenceImageBase64];
+  } else {
+    // 文生视频模式
+    reqKey = "jimeng_t2v_v30";
+    binaryData = undefined;
+  }
+
+  const submitBody = {
+    req_key: reqKey,
+    prompt,
+    seed: -1,
+    frames,
+    aspect_ratio: aspectRatio,
+    ...(binaryData ? { binary_data_base64: binaryData } : {})
+  };
+
+  const submitResult = await callVisualApi("CVSync2AsyncSubmitTask", submitBody);
+  const submitPayload = submitResult.data as { code?: number; message?: string; request_id?: string; data?: { task_id?: string } } | null;
+
+  if (!submitResult.ok || submitPayload?.code !== 10000 || !submitPayload?.data?.task_id) {
+    return {
+      ok: false,
+      providerMessage: `Jimeng video submit failed: ${submitPayload?.message || `HTTP ${submitResult.status}`}${
+        submitPayload?.request_id ? ` (request_id: ${submitPayload.request_id})` : ""
+      }`,
+      raw: submitResult.data
+    };
+  }
+
+  const taskId = submitPayload.data.task_id;
+  const maxAttempts = Number.parseInt(getEnv("JIMENG_VIDEO_POLL_MAX_ATTEMPTS") || "60", 10);
+  const pollIntervalMs = Number.parseInt(getEnv("JIMENG_VIDEO_POLL_INTERVAL_MS") || "5000", 10);
+  const reqJson = JSON.stringify({
+    return_url: true,
+    logo_info: {
+      add_logo: false,
+      position: 0,
+      language: 0,
+      opacity: 1
+    }
+  });
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const pollResult = await callVisualApi("CVSync2AsyncGetResult", {
+      req_key: reqKey,
+      task_id: taskId,
+      req_json: reqJson
+    });
+
+    const pollPayload = pollResult.data as
+      | { code?: number; message?: string; request_id?: string; data?: { status?: string; video_urls?: string[]; video_url?: string; url?: string; result_url?: string; [key: string]: unknown } }
+      | null;
+
+    if (!pollResult.ok || pollPayload?.code !== 10000) {
+      return {
+        ok: false,
+        providerMessage: `Jimeng video polling failed: ${pollPayload?.message || `HTTP ${pollResult.status}`}${
+          pollPayload?.request_id ? ` (request_id: ${pollPayload.request_id})` : ""
+        }`,
+        raw: pollResult.data
+      };
+    }
+
+    const taskStatus = pollPayload.data?.status;
+
+    if (taskStatus === "done") {
+      // 根据API返回结构，优先使用video_url字段
+      const videoUrl =
+        pollPayload.data?.video_url ||
+        pollPayload.data?.video_urls?.[0] ||
+        pollPayload.data?.url ||
+        pollPayload.data?.result_url;
+
+      if (!videoUrl) {
+        return {
+          ok: false,
+          providerMessage: `Jimeng video task finished but no video URL was returned.`,
+          raw: pollResult.data
+        };
+      }
+
+      return {
+        ok: true,
+        videoUrl,
+        taskId,
+        providerMessage: "Jimeng video generated successfully.",
+        raw: pollResult.data
+      };
+    }
+
+    if (taskStatus === "not_found" || taskStatus === "expired") {
+      return {
+        ok: false,
+        providerMessage: `Jimeng video task status: ${taskStatus}`,
+        raw: pollResult.data
+      };
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  return {
+    ok: false,
+    providerMessage: `Jimeng video polling timed out. Waited about ${Math.round((maxAttempts * pollIntervalMs) / 1000)}s.`,
+    taskId
+  };
+}
+
+async function generateJimengVideoGeneric(input: VideoGenerationInput): Promise<ProviderVideoResult> {
+  const { prompt, referenceImageBase64 } = input;
+  const endpoint = getEnv("JIMENG_VIDEO_ENDPOINT");
+  const apiKey = getEnv("JIMENG_API_KEY");
+  const model = getEnv("JIMENG_VIDEO_MODEL") || "jimeng-video-2.0";
+
+  const requestBody = {
+    model,
+    prompt,
+    ...(referenceImageBase64 ? { binary_data_base64: [referenceImageBase64] } : {})
+  };
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const rawText = await response.text();
+  let payload: unknown = null;
+
+  try {
+    payload = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    payload = rawText;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      providerMessage: `Jimeng video request failed with HTTP ${response.status}.`,
+      raw: payload
+    };
+  }
+
+  const videoUrl = extractImageUrl(payload);
+
+  if (!videoUrl) {
+    return {
+      ok: false,
+      providerMessage: "Jimeng video response did not contain a usable video URL.",
+      raw: payload
+    };
+  }
+
+  return {
+    ok: true,
+    videoUrl,
+    providerMessage: "Jimeng video generated successfully.",
+    raw: payload
+  };
+}
+
+export async function generateJimengVideo(
+  prompt: string,
+  referenceImageBase64?: string,
+  referenceEndImageBase64?: string,
+  duration?: number,
+  aspectRatio?: string
+): Promise<ProviderVideoResult> {
+  if (!isRealMode()) {
+    return {
+      ok: false,
+      providerMessage: "Jimeng real mode is not configured."
+    };
+  }
+
+  const input: VideoGenerationInput = {
+    prompt,
+    referenceImageBase64,
+    referenceEndImageBase64,
+    duration,
+    aspectRatio
+  };
+
+  if (hasOfficialVisualConfig()) {
+    return generateJimengVideoOfficial(input);
+  }
+
+  return generateJimengVideoGeneric(input);
 }

@@ -12,6 +12,14 @@ type Context = {
 };
 
 function getContentTypeFromPath(filePath: string) {
+  if (filePath.endsWith(".mp4")) {
+    return "video/mp4";
+  }
+
+  if (filePath.endsWith(".webm")) {
+    return "video/webm";
+  }
+
   if (filePath.endsWith(".png")) {
     return "image/png";
   }

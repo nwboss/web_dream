@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
-import { generateJimengImage, isJimengRealImageEnabled } from "@/lib/jimeng-provider";
+import { generateJimengImage, generateJimengVideo, isJimengRealImageEnabled, isJimengRealVideoEnabled } from "@/lib/jimeng-provider";
 import type { Asset, Job, JobStatus, Shot } from "@/lib/project-store";
 
 type StudioMode = "image" | "video";
@@ -28,6 +28,7 @@ type StudioStoreRecord = {
   videoJobs: Job[];
   videoAssets: Asset[];
   referenceImage: StudioReferenceImage | null;
+  referenceEndImage: StudioReferenceImage | null;
 };
 
 type StudioStore = Record<string, StudioStoreRecord>;
@@ -50,7 +51,8 @@ function emptyRecord(): StudioStoreRecord {
     imageAssets: [],
     videoJobs: [],
     videoAssets: [],
-    referenceImage: null
+    referenceImage: null,
+    referenceEndImage: null
   };
 }
 
@@ -207,7 +209,8 @@ export async function getStudioState(ownerEmail: string) {
     imageAssets: record.imageAssets.map(cloneAsset),
     videoJobs: record.videoJobs.map(cloneJob),
     videoAssets: record.videoAssets.map(cloneAsset),
-    referenceImage: cloneReferenceImage(record.referenceImage)
+    referenceImage: cloneReferenceImage(record.referenceImage),
+    referenceEndImage: cloneReferenceImage(record.referenceEndImage)
   };
 }
 
@@ -292,34 +295,158 @@ export async function generateStandaloneImage(ownerEmail: string, draft: StudioI
   }
 }
 
-export async function generateStandaloneVideo(ownerEmail: string, prompt: string) {
+async function downloadVideoToLocal(assetId: string, videoUrl: string) {
+  const response = await fetch(videoUrl);
+  if (!response.ok) {
+    throw new Error(`下载视频失败: HTTP ${response.status}`);
+  }
+
+  const extension = ".mp4";
+  const storageFile = `${assetId}${extension}`;
+  const storagePath = path.join(assetsDir, storageFile);
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
+
+  await mkdir(assetsDir, { recursive: true });
+  await writeFile(storagePath, fileBuffer);
+
+  return storageFile;
+}
+
+async function processVideoGenerationInBackground(
+  ownerEmail: string,
+  jobId: string,
+  prompt: string,
+  aspectRatio?: string,
+  duration?: number,
+  referenceImageBase64?: string,
+  referenceEndImageBase64?: string
+) {
+  try {
+    const providerResult = await generateJimengVideo(prompt, referenceImageBase64, referenceEndImageBase64, duration, aspectRatio);
+
+    const store = await ensureStore();
+    const record = ensureUserRecord(store, ownerEmail);
+    const job = record.videoJobs.find((j) => j.id === jobId);
+
+    if (!job) {
+      console.error(`[Video Generation] Job ${jobId} not found`);
+      return;
+    }
+
+    if (!providerResult.ok || !providerResult.videoUrl) {
+      job.status = "failed";
+      job.message = providerResult.providerMessage;
+      await saveStore(store);
+      return;
+    }
+
+    const assetId = createId("asset");
+    const storagePath = await downloadVideoToLocal(assetId, providerResult.videoUrl);
+    const asset: Asset = {
+      id: assetId,
+      kind: "video",
+      title: "独立视频片段",
+      prompt,
+      previewUrl: `/api/studio/assets/${assetId}`,
+      createdAt: now(),
+      source: "jimeng",
+      storagePath,
+      originalUrl: providerResult.videoUrl,
+      durationSec: duration || 5
+    };
+
+    job.status = "succeeded";
+    job.message = "已完成独立视频生成";
+    record.videoAssets = [asset, ...record.videoAssets].slice(0, 24);
+    await saveStore(store);
+  } catch (error) {
+    console.error(`[Video Generation] Error for job ${jobId}:`, error);
+
+    const store = await ensureStore();
+    const record = ensureUserRecord(store, ownerEmail);
+    const job = record.videoJobs.find((j) => j.id === jobId);
+
+    if (job) {
+      job.status = "failed";
+      job.message = error instanceof Error ? error.message : "视频生成失败";
+      await saveStore(store);
+    }
+  }
+}
+
+export async function generateStandaloneVideo(
+  ownerEmail: string,
+  prompt: string,
+  aspectRatio?: string,
+  duration?: number
+) {
   const store = await ensureStore();
   const record = ensureUserRecord(store, ownerEmail);
   const createdAt = now();
 
+  const isRealEnabled = isJimengRealVideoEnabled();
+
+  // 读取参考图
+  const referenceImageBase64 = record.referenceImage
+    ? (await readFile(path.join(assetsDir, record.referenceImage.storagePath))).toString("base64")
+    : undefined;
+
+  const referenceEndImageBase64 = record.referenceEndImage
+    ? (await readFile(path.join(assetsDir, record.referenceEndImage.storagePath))).toString("base64")
+    : undefined;
+
+  if (!isRealEnabled) {
+    const job: Job = {
+      id: createId("job"),
+      kind: "video",
+      status: "succeeded",
+      createdAt,
+      message: "已生成独立视频结果（Mock）"
+    };
+
+    const asset: Asset = {
+      id: createId("asset"),
+      kind: "video",
+      title: "独立视频片段",
+      prompt,
+      previewUrl: createMockPreview("video", "独立视频片段", "#22c55e"),
+      createdAt,
+      durationSec: 5,
+      source: "mock"
+    };
+
+    record.videoJobs = [job, ...record.videoJobs].slice(0, 12);
+    record.videoAssets = [asset, ...record.videoAssets].slice(0, 24);
+    await saveStore(store);
+    return { job, asset };
+  }
+
   const job: Job = {
     id: createId("job"),
     kind: "video",
-    status: "succeeded",
+    status: "processing",
     createdAt,
-    message: "已生成独立视频结果（Mock）"
+    message: "视频生成中，预计需要 1-3 分钟"
   };
-
-  const asset: Asset = {
-    id: createId("asset"),
-    kind: "video",
-    title: "独立视频片段",
-    prompt,
-    previewUrl: createMockPreview("video", "独立视频片段", "#22c55e"),
-    createdAt,
-    durationSec: 5,
-    source: "mock"
-  };
-
   record.videoJobs = [job, ...record.videoJobs].slice(0, 12);
-  record.videoAssets = [asset, ...record.videoAssets].slice(0, 24);
   await saveStore(store);
-  return { job, asset };
+
+  // 异步执行，不等待结果
+  setImmediate(() => {
+    processVideoGenerationInBackground(
+      ownerEmail,
+      job.id,
+      prompt,
+      aspectRatio,
+      duration,
+      referenceImageBase64,
+      referenceEndImageBase64
+    ).catch((error) => {
+      console.error("[Video Generation] Background process error:", error);
+    });
+  });
+
+  return { job, asset: null };
 }
 
 export async function getStudioAsset(ownerEmail: string, assetId: string) {
@@ -347,6 +474,22 @@ export async function getStudioAsset(ownerEmail: string, assetId: string) {
         storagePath: record.referenceImage.storagePath
       },
       absolutePath: path.join(assetsDir, record.referenceImage.storagePath)
+    };
+  }
+
+  if (record.referenceEndImage?.id === assetId) {
+    return {
+      asset: {
+        id: record.referenceEndImage.id,
+        kind: "image" as const,
+        title: record.referenceEndImage.title,
+        prompt: "",
+        previewUrl: record.referenceEndImage.previewUrl,
+        createdAt: record.referenceEndImage.createdAt,
+        source: "mock" as const,
+        storagePath: record.referenceEndImage.storagePath
+      },
+      absolutePath: path.join(assetsDir, record.referenceEndImage.storagePath)
     };
   }
 
@@ -378,5 +521,33 @@ export async function clearReferenceImage(ownerEmail: string) {
   const store = await ensureStore();
   const record = ensureUserRecord(store, ownerEmail);
   record.referenceImage = null;
+  await saveStore(store);
+}
+
+export async function saveReferenceEndImage(ownerEmail: string, fileName: string, contentType: string, fileBuffer: Buffer) {
+  const store = await ensureStore();
+  const record = ensureUserRecord(store, ownerEmail);
+  const referenceId = createId("ref_end");
+  const extension = inferImageExtensionFromUpload(contentType, fileName);
+  const storagePath = await saveBufferToLocal(referenceId, fileBuffer, extension);
+
+  const referenceEndImage: StudioReferenceImage = {
+    id: referenceId,
+    title: fileName || "尾帧参考图",
+    previewUrl: `/api/studio/assets/${referenceId}`,
+    createdAt: now(),
+    storagePath
+  };
+
+  record.referenceEndImage = referenceEndImage;
+  await saveStore(store);
+
+  return cloneReferenceImage(referenceEndImage);
+}
+
+export async function clearReferenceEndImage(ownerEmail: string) {
+  const store = await ensureStore();
+  const record = ensureUserRecord(store, ownerEmail);
+  record.referenceEndImage = null;
   await saveStore(store);
 }
