@@ -176,55 +176,57 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   return (
     <div className="workspace-module-stack">
       <form className="workspace-editor panel studio-editor" onSubmit={handleSubmit}>
-        <div className="studio-compose-grid">
-          <div className="studio-reference-card">
-            <div className="studio-reference-head">
-              <span className="studio-label">首帧</span>
-              {referenceImage ? (
-                <div className="studio-reference-actions">
-                  <button className="studio-mini-action" type="button" onClick={() => fileInputRef.current?.click()}>
-                    替换
-                  </button>
-                  <button className="studio-mini-action is-danger" type="button" onClick={handleRemoveReference}>
-                    移除
-                  </button>
-                </div>
-              ) : null}
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "150px 150px", gap: "16px" }}>
+            <div className="studio-reference-card">
+              <div className="studio-reference-head">
+                <span className="studio-label">首帧</span>
+                {referenceImage ? (
+                  <div className="studio-reference-actions">
+                    <button className="studio-mini-action" type="button" onClick={() => fileInputRef.current?.click()}>
+                      替换
+                    </button>
+                    <button className="studio-mini-action is-danger" type="button" onClick={handleRemoveReference}>
+                      移除
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <button className="studio-reference-box studio-reference-button" type="button" onClick={() => fileInputRef.current?.click()}>
+                {referenceImage ? <img src={referenceImage.previewUrl} alt={referenceImage.title} className="studio-reference-preview" /> : <span>+</span>}
+              </button>
+              <input ref={fileInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUpload} />
+              <p className="muted studio-file-name" title={referenceImage?.title}>
+                {referenceImage ? referenceImage.title : "点击上传"}
+              </p>
             </div>
-            <button className="studio-reference-box studio-reference-button" type="button" onClick={() => fileInputRef.current?.click()}>
-              {referenceImage ? <img src={referenceImage.previewUrl} alt={referenceImage.title} className="studio-reference-preview" /> : <span>+</span>}
-            </button>
-            <input ref={fileInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUpload} />
-            <p className="muted studio-file-name" title={referenceImage?.title}>
-              {referenceImage ? referenceImage.title : "点击上传"}
-            </p>
-          </div>
 
-          <div className="studio-reference-card">
-            <div className="studio-reference-head">
-              <span className="studio-label">尾帧（可选）</span>
-              {referenceEndImage ? (
-                <div className="studio-reference-actions">
-                  <button className="studio-mini-action" type="button" onClick={() => fileEndInputRef.current?.click()}>
-                    替换
-                  </button>
-                  <button className="studio-mini-action is-danger" type="button" onClick={handleRemoveReferenceEnd}>
-                    移除
-                  </button>
-                </div>
-              ) : null}
+            <div className="studio-reference-card">
+              <div className="studio-reference-head">
+                <span className="studio-label">尾帧（可选）</span>
+                {referenceEndImage ? (
+                  <div className="studio-reference-actions">
+                    <button className="studio-mini-action" type="button" onClick={() => fileEndInputRef.current?.click()}>
+                      替换
+                    </button>
+                    <button className="studio-mini-action is-danger" type="button" onClick={handleRemoveReferenceEnd}>
+                      移除
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <button className="studio-reference-box studio-reference-button" type="button" onClick={() => fileEndInputRef.current?.click()}>
+                {referenceEndImage ? <img src={referenceEndImage.previewUrl} alt={referenceEndImage.title} className="studio-reference-preview" /> : <span>+</span>}
+              </button>
+              <input ref={fileEndInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUploadEnd} />
+              <p className="muted studio-file-name" title={referenceEndImage?.title}>
+                {referenceEndImage ? referenceEndImage.title : "点击上传"}
+              </p>
             </div>
-            <button className="studio-reference-box studio-reference-button" type="button" onClick={() => fileEndInputRef.current?.click()}>
-              {referenceEndImage ? <img src={referenceEndImage.previewUrl} alt={referenceEndImage.title} className="studio-reference-preview" /> : <span>+</span>}
-            </button>
-            <input ref={fileEndInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUploadEnd} />
-            <p className="muted studio-file-name" title={referenceEndImage?.title}>
-              {referenceEndImage ? referenceEndImage.title : "点击上传"}
-            </p>
           </div>
 
           <div className="field studio-prompt-card">
-            <textarea id="prompt" name="prompt" rows={6} placeholder="描述你想生成的视频..." required />
+            <textarea id="prompt" name="prompt" rows={4} placeholder="描述你想生成的视频..." required />
             <div className="studio-controls-row">
               <div className="studio-chip-group">
                 {aspectRatios.map((ratio) => (
@@ -251,7 +253,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                 ))}
               </div>
               <button className="btn btn-primary studio-submit-btn" type="submit" disabled={isPending}>
-                {isPending ? "生成中..." : "生成"}
+                {isPending ? "生成中..." : "生成视频"}
               </button>
             </div>
           </div>

@@ -121,7 +121,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
   return (
     <div className="workspace-module-stack">
       <form className="workspace-editor panel studio-editor" onSubmit={handleSubmit}>
-        <div className="studio-compose-grid">
+        <div className="studio-compose-grid is-single">
           <div className="studio-reference-card">
             <div className="studio-reference-head">
               <span className="studio-label">参考图</span>

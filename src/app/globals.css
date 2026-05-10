@@ -351,15 +351,23 @@ select {
 .form-message {
   min-height: 24px;
   margin-top: 12px;
-  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .form-message.error {
-  color: var(--danger);
+  color: #ff9aa9;
+  background: rgba(255, 154, 169, 0.08);
+  border-color: rgba(255, 154, 169, 0.2);
 }
 
 .form-message.success {
-  color: var(--success);
+  color: #a3e635;
+  background: rgba(163, 230, 53, 0.08);
+  border-color: rgba(163, 230, 53, 0.2);
 }
 
 .dashboard-layout,
@@ -657,8 +665,12 @@ select {
 
 .studio-compose-grid {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 150px 150px minmax(0, 1fr);
   gap: 16px;
+}
+
+.studio-compose-grid.is-single {
+  grid-template-columns: 150px minmax(0, 1fr);
 }
 
 .studio-reference-card {
@@ -680,27 +692,35 @@ select {
 }
 
 .studio-label {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--muted);
+  letter-spacing: 0.02em;
 }
 
 .studio-reference-box {
   position: relative;
   display: grid;
   place-items: center;
-  height: 112px;
-  border-radius: 18px;
+  height: 140px;
+  border-radius: 16px;
   border: 2px dashed rgba(255, 255, 255, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   color: var(--muted);
-  font-size: 34px;
+  font-size: 38px;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.studio-reference-box:hover {
+  border-color: rgba(255, 209, 102, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
 }
 
 .studio-reference-button {
   position: relative;
   width: 100%;
-  height: 112px;
+  height: 140px;
   cursor: pointer;
   padding: 0;
   overflow: hidden;
@@ -748,7 +768,9 @@ select {
 }
 
 .studio-prompt-card textarea {
-  min-height: 160px;
+  min-height: 120px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .studio-prompt-card.is-full {
@@ -890,12 +912,19 @@ select {
 
 .studio-result-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .studio-result-grid .result-card {
-  padding: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.studio-result-grid .result-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .studio-result-select {
@@ -904,13 +933,16 @@ select {
 }
 
 .studio-result-select.is-active {
-  border-color: rgba(255, 133, 82, 0.56);
-  background: rgba(255, 133, 82, 0.12);
+  border-color: rgba(255, 209, 102, 0.6);
+  background: rgba(255, 209, 102, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.2);
 }
 
 .studio-result-grid .result-preview {
   aspect-ratio: 1 / 1;
   max-height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .studio-result-grid .result-meta strong {
@@ -992,9 +1024,11 @@ select {
 .studio-controls-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 14px;
   flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .studio-chip-group {
@@ -1004,14 +1038,15 @@ select {
 }
 
 .studio-chip {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 
@@ -1028,14 +1063,16 @@ select {
 
 .studio-submit-btn {
   margin-left: auto;
-  height: 36px;
-  padding: 0 20px;
+  height: 40px;
+  padding: 0 28px;
   font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 133, 82, 0.2);
 }
 
 .studio-hero-result {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   padding: 0;
   border: none;
   background: transparent;
@@ -1044,8 +1081,10 @@ select {
 .studio-hero-result .result-preview {
   width: 100%;
   border-radius: 18px;
+  overflow: hidden;
   aspect-ratio: auto;
   max-height: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 .studio-hero-result .result-meta {
