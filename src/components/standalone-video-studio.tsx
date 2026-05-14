@@ -15,7 +15,6 @@ type StandaloneVideoStudioProps = {
 };
 
 const aspectRatios = ["16:9", "9:16", "1:1"] as const;
-const durations = [5, 10] as const;
 const videoModels = [
   { value: "doubao-seedance-1-5-pro-251215", label: "Seeddance 1.5 Pro", description: "支持首尾帧" },
   { value: "jimeng-video-2.0", label: "即梦视频 2.0", description: "仅支持首帧" }
@@ -27,7 +26,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   const [message, setMessage] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<typeof aspectRatios[number]>("16:9");
-  const [selectedDuration, setSelectedDuration] = useState<typeof durations[number]>(5);
+  const [selectedDuration, setSelectedDuration] = useState<number>(5);
   const [selectedModel, setSelectedModel] = useState<typeof videoModels[number]["value"]>("doubao-seedance-1-5-pro-251215");
   const [selectedStartImageId, setSelectedStartImageId] = useState<string | null>(null);
   const [selectedEndImageId, setSelectedEndImageId] = useState<string | null>(null);
@@ -325,6 +324,12 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                   ⚠️ 即梦视频 2.0 不支持尾帧，将忽略尾帧设置
                 </div>
               )}
+              {selectedModel === "doubao-seedance-1-5-pro-251215" &&
+               ((selectedStartImageId && selectedEndImageId) || (referenceImage && referenceEndImage)) && (
+                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--accent)' }}>
+                  ℹ️ 首尾帧模式下，时长固定为5秒
+                </div>
+              )}
             </div>
 
             <div className="studio-controls-row">
@@ -340,17 +345,27 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                   </button>
                 ))}
               </div>
-              <div className="studio-chip-group">
-                {durations.map((dur) => (
-                  <button
-                    key={dur}
-                    className={`studio-chip ${selectedDuration === dur ? "is-active" : ""}`}
-                    type="button"
-                    onClick={() => setSelectedDuration(dur)}
-                  >
-                    {dur}秒
-                  </button>
-                ))}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, maxWidth: "300px" }}>
+                <label htmlFor="duration-slider" style={{ fontSize: "14px", fontWeight: 500, color: "var(--muted)", minWidth: "60px" }}>
+                  时长: {selectedDuration}秒
+                </label>
+                <input
+                  id="duration-slider"
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={selectedDuration}
+                  onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                  style={{
+                    flex: 1,
+                    height: "6px",
+                    borderRadius: "3px",
+                    background: `linear-gradient(to right, rgba(255, 209, 102, 0.6) 0%, rgba(255, 209, 102, 0.6) ${(selectedDuration - 1) * 11.11}%, rgba(255, 255, 255, 0.1) ${(selectedDuration - 1) * 11.11}%, rgba(255, 255, 255, 0.1) 100%)`,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                />
               </div>
               <button className="btn btn-primary studio-submit-btn" type="submit" disabled={isPending}>
                 {isPending ? "生成中..." : "生成视频"}

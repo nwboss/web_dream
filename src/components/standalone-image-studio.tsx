@@ -13,12 +13,17 @@ type StandaloneImageStudioProps = {
 };
 
 const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
+const imageModels = [
+  { value: "jimeng-3.1", label: "即梦 3.1", description: "支持图生图" },
+  { value: "doubao-seedream-4-5-251128", label: "Seedream 4.5", description: "高质量图片生成" }
+] as const;
 
 export function StandaloneImageStudio({ assets, jobs, referenceImage }: StandaloneImageStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>("9:16");
+  const [selectedModel, setSelectedModel] = useState<typeof imageModels[number]["value"]>("jimeng-3.1");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const latestAsset = assets.find((asset) => asset.id === selectedAssetId) || assets[0];
@@ -36,6 +41,19 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
     }
   }, [assets, selectedAssetId]);
 
+  useEffect(() => {
+    // 如果有正在处理的任务，启动轮询
+    const hasProcessingJob = jobs.some((job) => job.status === "processing");
+
+    if (hasProcessingJob) {
+      const interval = setInterval(() => {
+        router.refresh();
+      }, 5000); // 每5秒刷新一次
+
+      return () => clearInterval(interval);
+    }
+  }, [jobs, router]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -50,7 +68,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         },
         body: JSON.stringify({
           ...payload,
-          aspectRatio: selectedAspectRatio
+          aspectRatio: selectedAspectRatio,
+          model: selectedModel
         })
       });
       const data = (await response.json()) as { ok: boolean; message?: string };
@@ -60,7 +79,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         return;
       }
 
-      setMessage("独立图片生成完成。");
+      setMessage(data.message || "图片生成任务已提交，正在后台处理...");
       router.refresh();
     });
   }
@@ -139,6 +158,29 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
 
           <div className="field studio-prompt-card">
             <textarea id="prompt" name="prompt" rows={6} placeholder="描述你想生成的图片..." required />
+
+            <div style={{ marginBottom: '12px' }}>
+              <label className="studio-label" style={{ display: 'block', marginBottom: '8px' }}>图片模型</label>
+              <div className="studio-chip-group">
+                {imageModels.map((model) => (
+                  <button
+                    key={model.value}
+                    className={`studio-chip ${selectedModel === model.value ? "is-active" : ""}`}
+                    type="button"
+                    onClick={() => setSelectedModel(model.value)}
+                    title={model.description}
+                  >
+                    {model.label}
+                  </button>
+                ))}
+              </div>
+              {selectedModel === "doubao-seedream-4-5-251128" && referenceImage && (
+                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--accent)' }}>
+                  ℹ️ Seedream 4.5 不支持图生图，将忽略参考图
+                </div>
+              )}
+            </div>
+
             <div className="studio-controls-row">
               <div className="studio-chip-group">
                 {aspectRatios.map((ratio) => (

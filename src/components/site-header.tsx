@@ -23,6 +23,9 @@ export async function SiteHeader() {
               <Link className="nav-link" href={"/studio/images" as Route}>
                 工作台
               </Link>
+              <Link className="nav-link" href={"/history" as Route}>
+                历史
+              </Link>
               <Link className="nav-link" href={"/projects" as Route}>
                 项目
               </Link>

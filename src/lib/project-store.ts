@@ -26,6 +26,7 @@ export type Job = {
   status: JobStatus;
   createdAt: string;
   message: string;
+  name?: string;
 };
 
 export type Asset = {

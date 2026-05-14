@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
 import { generateJimengImage, generateJimengVideo, isJimengRealImageEnabled, isJimengRealVideoEnabled } from "@/lib/jimeng-provider";
-import type { Asset, Job, JobStatus, Shot } from "@/lib/project-store";
+import type { Asset, Job, JobKind, JobStatus, Shot } from "@/lib/project-store";
 
 type StudioMode = "image" | "video";
 
@@ -43,6 +43,13 @@ function createId(prefix: string) {
 
 function now() {
   return new Date().toISOString();
+}
+
+function generateJobName(kind: JobKind, existingJobs: Job[]) {
+  // 计算该类型的任务数量（从1开始）
+  const count = existingJobs.filter(j => j.kind === kind).length + 1;
+  const prefix = kind === "image" ? "图片" : "视频";
+  return `${prefix} #${count}`;
 }
 
 function emptyRecord(): StudioStoreRecord {
@@ -214,58 +221,36 @@ export async function getStudioState(ownerEmail: string) {
   };
 }
 
-export async function generateStandaloneImage(ownerEmail: string, draft: StudioImageDraft) {
-  const store = await ensureStore();
-  const record = ensureUserRecord(store, ownerEmail);
-  const createdAt = now();
-
-  const promptText = [draft.stylePreset, draft.prompt].filter(Boolean).join("，");
-  const referenceImageBase64 = record.referenceImage
-    ? (await readFile(path.join(assetsDir, record.referenceImage.storagePath))).toString("base64")
-    : undefined;
-
-  if (!isJimengRealImageEnabled()) {
-    const job: Job = {
-      id: createId("job"),
-      kind: "image",
-      status: "succeeded",
-      createdAt,
-      message: "已生成独立图片结果（Mock）"
-    };
-
-    const asset: Asset = {
-      id: createId("asset"),
-      kind: "image",
-      title: draft.title?.trim() || "独立图片结果",
-      prompt: promptText,
-      previewUrl: createMockPreview("image", draft.title?.trim() || "独立图片结果", "#f97316"),
-      createdAt,
-      source: "mock"
-    };
-
-    record.imageJobs = [job, ...record.imageJobs].slice(0, 12);
-    record.imageAssets = [asset, ...record.imageAssets].slice(0, 24);
-    await saveStore(store);
-    return { job, asset };
-  }
-
-  const job: Job = {
-    id: createId("job"),
-    kind: "image",
-    status: "processing",
-    createdAt,
-    message: "图片生成中"
-  };
-  record.imageJobs = [job, ...record.imageJobs].slice(0, 12);
-  await saveStore(store);
-
+async function processImageGenerationInBackground(
+  ownerEmail: string,
+  jobId: string,
+  draft: StudioImageDraft,
+  referenceImageBase64?: string
+) {
   try {
-    const providerResult = await generateJimengImage(createShotDraft({ ...draft, prompt: promptText }), referenceImageBase64);
+    const promptText = [draft.stylePreset, draft.prompt].filter(Boolean).join("，");
+    // Seedream 不支持图生图，如果选择了 Seedream 模型则忽略 referenceImageBase64
+    const shouldUseReference = draft.model?.includes("seedream") ? undefined : referenceImageBase64;
+    const providerResult = await generateJimengImage(
+      createShotDraft({ ...draft, prompt: promptText }),
+      shouldUseReference,
+      draft.model
+    );
+
+    const store = await ensureStore();
+    const record = ensureUserRecord(store, ownerEmail);
+    const job = record.imageJobs.find((j) => j.id === jobId);
+
+    if (!job) {
+      console.error(`[Image Generation] Job ${jobId} not found`);
+      return;
+    }
+
     if (!providerResult.ok || !providerResult.imageUrl) {
       job.status = "failed";
       job.message = providerResult.providerMessage;
       await saveStore(store);
-      return { job, asset: null };
+      return;
     }
 
     const assetId = createId("asset");
@@ -286,13 +271,79 @@ export async function generateStandaloneImage(ownerEmail: string, draft: StudioI
     job.message = "已完成独立图片生成";
     record.imageAssets = [asset, ...record.imageAssets].slice(0, 24);
     await saveStore(store);
-    return { job, asset };
   } catch (error) {
-    job.status = "failed";
-    job.message = error instanceof Error ? error.message : "图片生成失败";
-    await saveStore(store);
-    return { job, asset: null };
+    console.error(`[Image Generation] Error for job ${jobId}:`, error);
+
+    const store = await ensureStore();
+    const record = ensureUserRecord(store, ownerEmail);
+    const job = record.imageJobs.find((j) => j.id === jobId);
+
+    if (job) {
+      job.status = "failed";
+      job.message = error instanceof Error ? error.message : "图片生成失败";
+      await saveStore(store);
+    }
   }
+}
+
+export async function generateStandaloneImage(ownerEmail: string, draft: StudioImageDraft) {
+  const store = await ensureStore();
+  const record = ensureUserRecord(store, ownerEmail);
+  const createdAt = now();
+
+  const promptText = [draft.stylePreset, draft.prompt].filter(Boolean).join("，");
+  const jobName = generateJobName("image", record.imageJobs);
+
+  if (!isJimengRealImageEnabled()) {
+    const job: Job = {
+      id: createId("job"),
+      kind: "image",
+      status: "succeeded",
+      createdAt,
+      message: "已生成独立图片结果（Mock）",
+      name: jobName
+    };
+
+    const asset: Asset = {
+      id: createId("asset"),
+      kind: "image",
+      title: draft.title?.trim() || "独立图片结果",
+      prompt: promptText,
+      previewUrl: createMockPreview("image", draft.title?.trim() || "独立图片结果", "#f97316"),
+      createdAt,
+      source: "mock"
+    };
+
+    record.imageJobs = [job, ...record.imageJobs].slice(0, 12);
+    record.imageAssets = [asset, ...record.imageAssets].slice(0, 24);
+    await saveStore(store);
+    return { job, asset };
+  }
+
+  // 读取参考图
+  const referenceImageBase64 = record.referenceImage
+    ? (await readFile(path.join(assetsDir, record.referenceImage.storagePath))).toString("base64")
+    : undefined;
+
+  const job: Job = {
+    id: createId("job"),
+    kind: "image",
+    status: "processing",
+    createdAt,
+    message: "图片生成中，预计需要 30-60 秒",
+    name: jobName
+  };
+  record.imageJobs = [job, ...record.imageJobs].slice(0, 12);
+  await saveStore(store);
+
+  // 在后台处理图片生成
+  setImmediate(() => {
+    processImageGenerationInBackground(ownerEmail, job.id, draft, referenceImageBase64).catch((error) => {
+      console.error("[Image Generation] Background process failed:", error);
+    });
+  });
+
+  return { job, asset: null };
 }
 
 async function downloadVideoToLocal(assetId: string, videoUrl: string) {
@@ -411,13 +462,16 @@ export async function generateStandaloneVideo(
     referenceEndImageBase64 = (await readFile(path.join(assetsDir, record.referenceEndImage.storagePath))).toString("base64");
   }
 
+  const jobName = generateJobName("video", record.videoJobs);
+
   if (!isRealEnabled) {
     const job: Job = {
       id: createId("job"),
       kind: "video",
       status: "succeeded",
       createdAt,
-      message: "已生成独立视频结果（Mock）"
+      message: "已生成独立视频结果（Mock）",
+      name: jobName
     };
 
     const asset: Asset = {
@@ -442,7 +496,8 @@ export async function generateStandaloneVideo(
     kind: "video",
     status: "processing",
     createdAt,
-    message: "视频生成中，预计需要 1-3 分钟"
+    message: "视频生成中，预计需要 1-3 分钟",
+    name: jobName
   };
   record.videoJobs = [job, ...record.videoJobs].slice(0, 12);
   await saveStore(store);

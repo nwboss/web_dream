@@ -62,6 +62,12 @@ function mapAspectRatioToSize(aspectRatio: Shot["aspectRatio"]) {
   }
 }
 
+function mapAspectRatioToSeedreamSize(aspectRatio: Shot["aspectRatio"]) {
+  // Seedream 4.5 使用 "2K" 尺寸，宽高比通过 aspect_ratio 控制
+  // 但API文档中只有 size 参数，可能需要固定为 "2K"
+  return "2K";
+}
+
 function extractImageUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -175,9 +181,7 @@ async function callVisualApi(action: "CVSync2AsyncSubmitTask" | "CVSync2AsyncGet
   };
 
   const accessKey = getEnv("JIMENG_ACCESS_KEY");
-  const secretKeyBase64 = getEnv("JIMENG_SECRET_KEY");
-  // 火山引擎 Visual API 要求 SECRET_KEY 必须先 Base64 解码
-  const secretKey = Buffer.from(secretKeyBase64, "base64").toString("utf8");
+  const secretKey = getEnv("JIMENG_SECRET_KEY");
   const sessionToken = getEnv("JIMENG_SESSION_TOKEN");
   const { dateTime, shortDate } = getDateParts();
   const canonicalQuery = buildCanonicalQuery(params);
@@ -406,7 +410,69 @@ async function generateJimengImageGeneric(input: ImageGenerationInput): Promise<
   };
 }
 
-export async function generateJimengImage(shot: Shot, referenceImageBase64?: string): Promise<ProviderImageResult> {
+async function generateSeedreamImage(input: ImageGenerationInput): Promise<ProviderImageResult> {
+  const { shot } = input;
+  const arkEndpoint = getEnv("ARK_ENDPOINT");
+  const arkApiKey = getEnv("ARK_API_KEY");
+
+  const prompt = shot.prompt || shot.description || shot.title;
+
+  const requestBody = {
+    model: "doubao-seedream-4-5-251128",
+    prompt,
+    sequential_image_generation: "disabled",
+    response_format: "url",
+    size: mapAspectRatioToSeedreamSize(shot.aspectRatio),
+    stream: false,
+    watermark: false
+  };
+
+  const response = await fetch(`${arkEndpoint}/images/generations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${arkApiKey}`
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const rawText = await response.text();
+  let payload: unknown = null;
+
+  try {
+    payload = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    payload = rawText;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      providerMessage: `Seedream request failed with HTTP ${response.status}.`,
+      raw: payload
+    };
+  }
+
+  // Seedream API 返回格式：{ data: [{ url: "..." }] }
+  const imageUrl = extractImageUrl(payload);
+
+  if (!imageUrl) {
+    return {
+      ok: false,
+      providerMessage: "Seedream response did not contain a usable image URL.",
+      raw: payload
+    };
+  }
+
+  return {
+    ok: true,
+    imageUrl,
+    providerMessage: "Seedream image generated successfully.",
+    raw: payload
+  };
+}
+
+export async function generateJimengImage(shot: Shot, referenceImageBase64?: string, modelOverride?: string): Promise<ProviderImageResult> {
   if (!isRealMode()) {
     return {
       ok: false,
@@ -418,6 +484,20 @@ export async function generateJimengImage(shot: Shot, referenceImageBase64?: str
     shot,
     referenceImageBase64
   };
+
+  // 优先使用modelOverride，其次使用环境变量
+  const model = modelOverride || getEnv("JIMENG_IMAGE_MODEL") || "jimeng-3.1";
+
+  // 如果选择了 Seedream 模型，使用火山方舟API
+  if (model.includes("seedream")) {
+    if (!hasArkConfig()) {
+      return {
+        ok: false,
+        providerMessage: "Seedream models require ARK_API_KEY and ARK_ENDPOINT to be configured."
+      };
+    }
+    return generateSeedreamImage(input);
+  }
 
   if (hasOfficialVisualConfig()) {
     return generateJimengImageOfficial(input);
@@ -435,8 +515,8 @@ async function generateJimengVideoOfficial(input: VideoGenerationInput): Promise
 
   // 根据时长计算帧数
   // 根据火山引擎文档：frames = 24 * n + 1，其中n为秒数
-  // 5秒=121帧，10秒=241帧
-  const frames = duration === 10 ? 241 : 121;
+  // 1秒=25帧, 2秒=49帧, 3秒=73帧, 4秒=97帧, 5秒=121帧, 6秒=145帧, 7秒=169帧, 8秒=193帧, 9秒=217帧, 10秒=241帧
+  const frames = duration * 24 + 1;
 
   // 确定req_key和binary_data
   // 根据火山引擎文档：https://www.volcengine.com/docs/85621/1785204
@@ -645,12 +725,18 @@ async function generateSeeddanceVideo(input: VideoGenerationInput): Promise<Prov
     });
   }
 
+  // 根据是否有首尾帧来确定duration的有效性
+  // 首尾帧模式(flf2v)：duration必须是5秒
+  // 首帧模式(i2v)或文生视频(t2v)：duration可以是1-10秒
+  const hasFirstAndLastFrame = referenceImageBase64 && referenceEndImageBase64;
+  const finalDuration = hasFirstAndLastFrame ? 5 : duration;
+
   // 提交任务 - 使用正确的火山方舟 Content Generation API 格式
   const submitBody = {
     model: "doubao-seedance-1-5-pro-251215",
     content,
     ratio: aspectRatio,
-    duration,
+    duration: finalDuration,
     watermark: false,
     generate_audio: true
   };

@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     prompt?: string;
     aspectRatio?: "9:16" | "16:9" | "1:1";
     title?: string;
+    model?: string;
   };
 
   const prompt = body.prompt?.trim() || "";
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
   const result = await generateStandaloneImage(session.email, {
     prompt,
     aspectRatio: body.aspectRatio || "9:16",
-    title: body.title?.trim() || "独立图片结果"
+    title: body.title?.trim() || "独立图片结果",
+    model: body.model
   });
 
   if (!result.asset) {
