@@ -79,23 +79,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="shell cta-section">
-        <div className="cta-banner">
-          <div className="cta-content">
-            <h2>准备好开始了吗？</h2>
-            <p>加入我们，开启 AI 创作之旅</p>
-          </div>
-          <div className="hero-actions">
-            <Link className="btn btn-primary" href="/register">
-              免费注册
-            </Link>
-            <Link className="btn btn-secondary" href="/login">
-              立即登录
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <footer className="shell footer">
         <p>即梦工坊 - AI 驱动的漫剧创作平台</p>
       </footer>
