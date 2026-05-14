@@ -6,7 +6,7 @@
       "title": "逆光重启",
       "premise": "一个被误解的高中生，在一次意外后看见了改变命运的缝隙。",
       "genre": "都市校园 / 悬念",
-      "updatedAt": "2026-05-07T05:23:37.850Z",
+      "updatedAt": "2026-05-11T10:10:39.058Z",
       "scenes": [
         {
           "id": "scene_t0ecuqoa",
@@ -43,6 +43,17 @@
               "status": "draft",
               "aspectRatio": "9:16",
               "updatedAt": "2026-05-07T05:23:37.850Z",
+              "jobs": [],
+              "assets": []
+            },
+            {
+              "id": "shot_sark9u57",
+              "title": "Shot 04 新分镜",
+              "description": "补充角色、环境、镜头和动作描述。",
+              "prompt": "",
+              "status": "draft",
+              "aspectRatio": "9:16",
+              "updatedAt": "2026-05-11T10:10:39.058Z",
               "jobs": [],
               "assets": []
             }

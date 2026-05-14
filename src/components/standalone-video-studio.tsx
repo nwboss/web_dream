@@ -11,18 +11,27 @@ type StandaloneVideoStudioProps = {
   jobs: Job[];
   referenceImage: StudioReferenceImage | null;
   referenceEndImage: StudioReferenceImage | null;
+  imageAssets: Asset[];
 };
 
 const aspectRatios = ["16:9", "9:16", "1:1"] as const;
 const durations = [5, 10] as const;
+const videoModels = [
+  { value: "doubao-seedance-1-5-pro-251215", label: "Seeddance 1.5 Pro", description: "支持首尾帧" },
+  { value: "jimeng-video-2.0", label: "即梦视频 2.0", description: "仅支持首帧" }
+] as const;
 
-export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage }: StandaloneVideoStudioProps) {
+export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage, imageAssets }: StandaloneVideoStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<typeof aspectRatios[number]>("16:9");
   const [selectedDuration, setSelectedDuration] = useState<typeof durations[number]>(5);
+  const [selectedModel, setSelectedModel] = useState<typeof videoModels[number]["value"]>("doubao-seedance-1-5-pro-251215");
+  const [selectedStartImageId, setSelectedStartImageId] = useState<string | null>(null);
+  const [selectedEndImageId, setSelectedEndImageId] = useState<string | null>(null);
+  const [imageSelectMode, setImageSelectMode] = useState<"start" | "end">("start");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileEndInputRef = useRef<HTMLInputElement | null>(null);
   const latestAsset = assets.find((asset) => asset.id === selectedAssetId) || assets[0];
@@ -68,7 +77,10 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
         body: JSON.stringify({
           ...payload,
           aspectRatio: selectedAspectRatio,
-          duration: selectedDuration
+          duration: selectedDuration,
+          model: selectedModel,
+          selectedStartImageId,
+          selectedEndImageId
         })
       });
       const data = (await response.json()) as { ok: boolean; message?: string };
@@ -176,7 +188,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   return (
     <div className="workspace-module-stack">
       <form className="workspace-editor panel studio-editor" onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gap: "16px" }}>
+        <div style={{ display: "grid", gap: "24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "150px 150px", gap: "16px" }}>
             <div className="studio-reference-card">
               <div className="studio-reference-head">
@@ -225,8 +237,96 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
             </div>
           </div>
 
+          {imageAssets.length > 0 && (
+            <div>
+              <div className="section-header" style={{ marginBottom: '12px' }}>
+                <span className="studio-label">或从已生成图片中选择</span>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div className="studio-chip-group">
+                    <button
+                      type="button"
+                      className={`studio-chip ${imageSelectMode === 'start' ? 'is-active' : ''}`}
+                      onClick={() => setImageSelectMode('start')}
+                    >
+                      首帧
+                    </button>
+                    <button
+                      type="button"
+                      className={`studio-chip ${imageSelectMode === 'end' ? 'is-active' : ''}`}
+                      onClick={() => setImageSelectMode('end')}
+                    >
+                      尾帧
+                    </button>
+                  </div>
+                  <a href="/assets" className="link-accent" style={{ fontSize: '13px' }}>
+                    查看全部 →
+                  </a>
+                </div>
+              </div>
+              <div className="image-select-grid">
+                {imageAssets.slice(0, 8).map((asset) => {
+                  const isSelected = imageSelectMode === 'start'
+                    ? selectedStartImageId === asset.id
+                    : selectedEndImageId === asset.id;
+
+                  return (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      className={`image-select-item ${isSelected ? 'is-selected' : ''}`}
+                      onClick={() => {
+                        if (imageSelectMode === 'start') {
+                          setSelectedStartImageId(isSelected ? null : asset.id);
+                        } else {
+                          setSelectedEndImageId(isSelected ? null : asset.id);
+                        }
+                      }}
+                    >
+                      <img src={asset.previewUrl} alt={asset.title} />
+                      {isSelected && (
+                        <div className="image-select-badge">
+                          {imageSelectMode === 'start' ? '首' : '尾'}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {(selectedStartImageId || selectedEndImageId) && (
+                <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--muted)' }}>
+                  {selectedStartImageId && <span>✓ 已选首帧</span>}
+                  {selectedStartImageId && selectedEndImageId && <span> · </span>}
+                  {selectedEndImageId && <span>✓ 已选尾帧</span>}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="field studio-prompt-card">
             <textarea id="prompt" name="prompt" rows={4} placeholder="描述你想生成的视频..." required />
+
+            <div style={{ marginBottom: '12px' }}>
+              <label className="studio-label" style={{ display: 'block', marginBottom: '8px' }}>视频模型</label>
+              <div className="studio-chip-group">
+                {videoModels.map((model) => (
+                  <button
+                    key={model.value}
+                    className={`studio-chip ${selectedModel === model.value ? "is-active" : ""}`}
+                    type="button"
+                    onClick={() => setSelectedModel(model.value)}
+                    title={model.description}
+                  >
+                    {model.label}
+                  </button>
+                ))}
+              </div>
+              {selectedModel === "jimeng-video-2.0" && selectedEndImageId && (
+                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--danger)' }}>
+                  ⚠️ 即梦视频 2.0 不支持尾帧，将忽略尾帧设置
+                </div>
+              )}
+            </div>
+
             <div className="studio-controls-row">
               <div className="studio-chip-group">
                 {aspectRatios.map((ratio) => (
@@ -267,44 +367,41 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       </form>
 
       <section className="panel studio-panel">
-        {latestAsset ? (
-          <article className="studio-hero-result">
-            {latestAsset.kind === "video" ? (
-              <video className="result-preview" src={latestAsset.previewUrl} controls />
-            ) : (
-              <img className="result-preview" src={latestAsset.previewUrl} alt={latestAsset.title} />
-            )}
-            <div className="result-meta">
-              <span className="muted">{new Date(latestAsset.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-              {latestAsset.originalUrl && (
-                <a className="result-link" href={latestAsset.originalUrl} target="_blank" rel="noreferrer">
-                  查看原视频
-                </a>
-              )}
-            </div>
-          </article>
-        ) : (
-          <div className="studio-empty-result">
-            <p className="muted">暂无结果</p>
-          </div>
-        )}
+        <div className="section-header">
+          <h3 className="section-title">生成历史</h3>
+          <a href="/assets" className="link-accent">
+            查看全部 →
+          </a>
+        </div>
 
-        {assets.length > 1 && (
-          <div className="studio-result-grid">
-            {assets.map((asset) => (
-              <button
-                className={`result-card ${latestAsset?.id === asset.id ? "is-active" : ""}`}
-                key={asset.id}
-                type="button"
-                onClick={() => setSelectedAssetId(asset.id)}
-              >
+        {assets.length > 0 ? (
+          <div className="studio-result-grid-compact">
+            {assets.slice(0, 6).map((asset) => (
+              <div key={asset.id} className="result-card-compact">
                 {asset.kind === "video" ? (
                   <video className="result-preview" src={asset.previewUrl} />
                 ) : (
                   <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
                 )}
-              </button>
+                <div className="result-card-overlay">
+                  {asset.originalUrl && (
+                    <a
+                      className="result-link-btn"
+                      href={asset.originalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      查看
+                    </a>
+                  )}
+                </div>
+              </div>
             ))}
+          </div>
+        ) : (
+          <div className="studio-empty-result">
+            <p className="muted">暂无生成结果</p>
           </div>
         )}
       </section>

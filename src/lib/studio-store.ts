@@ -319,10 +319,11 @@ async function processVideoGenerationInBackground(
   aspectRatio?: string,
   duration?: number,
   referenceImageBase64?: string,
-  referenceEndImageBase64?: string
+  referenceEndImageBase64?: string,
+  model?: string
 ) {
   try {
-    const providerResult = await generateJimengVideo(prompt, referenceImageBase64, referenceEndImageBase64, duration, aspectRatio);
+    const providerResult = await generateJimengVideo(prompt, referenceImageBase64, referenceEndImageBase64, duration, aspectRatio, model);
 
     const store = await ensureStore();
     const record = ensureUserRecord(store, ownerEmail);
@@ -378,7 +379,10 @@ export async function generateStandaloneVideo(
   ownerEmail: string,
   prompt: string,
   aspectRatio?: string,
-  duration?: number
+  duration?: number,
+  selectedStartImageId?: string | null,
+  selectedEndImageId?: string | null,
+  model?: string
 ) {
   const store = await ensureStore();
   const record = ensureUserRecord(store, ownerEmail);
@@ -386,14 +390,26 @@ export async function generateStandaloneVideo(
 
   const isRealEnabled = isJimengRealVideoEnabled();
 
-  // 读取参考图
-  const referenceImageBase64 = record.referenceImage
-    ? (await readFile(path.join(assetsDir, record.referenceImage.storagePath))).toString("base64")
-    : undefined;
+  // 读取参考图 - 优先使用选中的图片素材，其次使用上传的参考图
+  let referenceImageBase64: string | undefined;
+  if (selectedStartImageId) {
+    const selectedAsset = record.imageAssets.find(a => a.id === selectedStartImageId);
+    if (selectedAsset?.storagePath) {
+      referenceImageBase64 = (await readFile(path.join(assetsDir, selectedAsset.storagePath))).toString("base64");
+    }
+  } else if (record.referenceImage) {
+    referenceImageBase64 = (await readFile(path.join(assetsDir, record.referenceImage.storagePath))).toString("base64");
+  }
 
-  const referenceEndImageBase64 = record.referenceEndImage
-    ? (await readFile(path.join(assetsDir, record.referenceEndImage.storagePath))).toString("base64")
-    : undefined;
+  let referenceEndImageBase64: string | undefined;
+  if (selectedEndImageId) {
+    const selectedAsset = record.imageAssets.find(a => a.id === selectedEndImageId);
+    if (selectedAsset?.storagePath) {
+      referenceEndImageBase64 = (await readFile(path.join(assetsDir, selectedAsset.storagePath))).toString("base64");
+    }
+  } else if (record.referenceEndImage) {
+    referenceEndImageBase64 = (await readFile(path.join(assetsDir, record.referenceEndImage.storagePath))).toString("base64");
+  }
 
   if (!isRealEnabled) {
     const job: Job = {
@@ -440,7 +456,8 @@ export async function generateStandaloneVideo(
       aspectRatio,
       duration,
       referenceImageBase64,
-      referenceEndImageBase64
+      referenceEndImageBase64,
+      model
     ).catch((error) => {
       console.error("[Video Generation] Background process error:", error);
     });

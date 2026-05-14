@@ -42,8 +42,12 @@ function hasGenericConfig() {
   return getEnv("JIMENG_IMAGE_ENDPOINT") !== "" && getEnv("JIMENG_API_KEY") !== "";
 }
 
+function hasArkConfig() {
+  return getEnv("ARK_API_KEY") !== "" && getEnv("ARK_ENDPOINT") !== "";
+}
+
 function isRealMode() {
-  return hasOfficialVisualConfig() || hasGenericConfig();
+  return hasOfficialVisualConfig() || hasGenericConfig() || hasArkConfig();
 }
 
 function mapAspectRatioToSize(aspectRatio: Shot["aspectRatio"]) {
@@ -171,7 +175,9 @@ async function callVisualApi(action: "CVSync2AsyncSubmitTask" | "CVSync2AsyncGet
   };
 
   const accessKey = getEnv("JIMENG_ACCESS_KEY");
-  const secretKey = getEnv("JIMENG_SECRET_KEY");
+  const secretKeyBase64 = getEnv("JIMENG_SECRET_KEY");
+  // 火山引擎 Visual API 要求 SECRET_KEY 必须先 Base64 解码
+  const secretKey = Buffer.from(secretKeyBase64, "base64").toString("utf8");
   const sessionToken = getEnv("JIMENG_SESSION_TOKEN");
   const { dateTime, shortDate } = getDateParts();
   const canonicalQuery = buildCanonicalQuery(params);
@@ -611,12 +617,158 @@ async function generateJimengVideoGeneric(input: VideoGenerationInput): Promise<
   };
 }
 
+async function generateSeeddanceVideo(input: VideoGenerationInput): Promise<ProviderVideoResult> {
+  const { prompt, referenceImageBase64, referenceEndImageBase64, duration = 5, aspectRatio = "16:9" } = input;
+  const arkEndpoint = getEnv("ARK_ENDPOINT");
+  const arkApiKey = getEnv("ARK_API_KEY");
+
+  // 构建 content 数组
+  const content: Array<{ type: string; text?: string; image_url?: { url: string }; role?: string }> = [
+    { type: "text", text: prompt }
+  ];
+
+  // 添加首帧图片
+  if (referenceImageBase64) {
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${referenceImageBase64}` },
+      role: "first_frame"
+    });
+  }
+
+  // 添加尾帧图片
+  if (referenceEndImageBase64) {
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${referenceEndImageBase64}` },
+      role: "last_frame"
+    });
+  }
+
+  // 提交任务 - 使用正确的火山方舟 Content Generation API 格式
+  const submitBody = {
+    model: "doubao-seedance-1-5-pro-251215",
+    content,
+    ratio: aspectRatio,
+    duration,
+    watermark: false,
+    generate_audio: true
+  };
+
+  const submitResponse = await fetch(`${arkEndpoint}/contents/generations/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${arkApiKey}`
+    },
+    body: JSON.stringify(submitBody)
+  });
+
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    return {
+      ok: false,
+      providerMessage: `Seeddance submit failed: HTTP ${submitResponse.status} - ${errorText}`,
+      raw: errorText
+    };
+  }
+
+  const submitData = await submitResponse.json() as {
+    id?: string;
+    error?: { code?: string; message?: string };
+  };
+
+  if (!submitData.id) {
+    return {
+      ok: false,
+      providerMessage: `Seeddance submit failed: ${submitData.error?.message || "No task ID returned"}`,
+      raw: submitData
+    };
+  }
+
+  const taskId = submitData.id;
+  const maxAttempts = Number.parseInt(getEnv("JIMENG_VIDEO_POLL_MAX_ATTEMPTS") || "60", 10);
+  const pollIntervalMs = Number.parseInt(getEnv("JIMENG_VIDEO_POLL_INTERVAL_MS") || "5000", 10);
+
+  // 轮询任务状态
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const pollResponse = await fetch(`${arkEndpoint}/contents/generations/tasks/${taskId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${arkApiKey}`
+      }
+    });
+
+    if (!pollResponse.ok) {
+      return {
+        ok: false,
+        providerMessage: `Seeddance polling failed: HTTP ${pollResponse.status}`,
+        taskId
+      };
+    }
+
+    const pollData = await pollResponse.json() as {
+      id: string;
+      status: string;
+      content?: {
+        video_url?: string;
+      };
+      error?: {
+        code?: string;
+        message?: string;
+      };
+    };
+
+    const status = pollData.status;
+
+    if (status === "succeeded") {
+      const videoUrl = pollData.content?.video_url;
+      if (!videoUrl) {
+        return {
+          ok: false,
+          providerMessage: "Seeddance task succeeded but no video URL returned",
+          taskId,
+          raw: pollData
+        };
+      }
+
+      return {
+        ok: true,
+        videoUrl,
+        taskId,
+        providerMessage: "Seeddance video generated successfully.",
+        raw: pollData
+      };
+    }
+
+    if (status === "failed") {
+      return {
+        ok: false,
+        providerMessage: `Seeddance task failed: ${pollData.error?.message || "Unknown error"}`,
+        taskId,
+        raw: pollData
+      };
+    }
+
+    // 状态为 queued 或 running，继续等待
+    await sleep(pollIntervalMs);
+  }
+
+  return {
+    ok: false,
+    providerMessage: `Seeddance polling timed out. Waited about ${Math.round((maxAttempts * pollIntervalMs) / 1000)}s.`,
+    taskId
+  };
+}
+
 export async function generateJimengVideo(
   prompt: string,
   referenceImageBase64?: string,
   referenceEndImageBase64?: string,
   duration?: number,
-  aspectRatio?: string
+  aspectRatio?: string,
+  modelOverride?: string
 ): Promise<ProviderVideoResult> {
   if (!isRealMode()) {
     return {
@@ -633,6 +785,22 @@ export async function generateJimengVideo(
     aspectRatio
   };
 
+  // 优先使用前端传来的模型参数，其次使用环境变量
+  const model = modelOverride || getEnv("JIMENG_VIDEO_MODEL") || "jimeng-video-2.0";
+
+  // 根据模型选择对应的实现
+  // 所有包含 "seedance" 的模型都使用火山方舟 API
+  if (model.includes("seedance")) {
+    if (!hasArkConfig()) {
+      return {
+        ok: false,
+        providerMessage: "Seeddance models require ARK_API_KEY and ARK_ENDPOINT to be configured."
+      };
+    }
+    return generateSeeddanceVideo(input);
+  }
+
+  // 老的即梦模型
   if (hasOfficialVisualConfig()) {
     return generateJimengVideoOfficial(input);
   }

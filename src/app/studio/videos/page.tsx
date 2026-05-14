@@ -1,7 +1,5 @@
-import Link from "next/link";
-
 import { StandaloneVideoStudio } from "@/components/standalone-video-studio";
-import { StudioModuleNav } from "@/components/studio-module-nav";
+import { StudioLayout } from "@/components/studio-layout";
 import { requireSession } from "@/lib/session";
 import { getStudioState } from "@/lib/studio-store";
 
@@ -12,22 +10,20 @@ export default async function VideoStudioPage() {
   const state = await getStudioState(session.email);
 
   return (
-    <main className="shell workspace-layout">
-      <div className="workspace-topbar">
-        <StudioModuleNav active="video" />
-        <Link className="btn btn-ghost" href="/account">
-          账户
-        </Link>
-      </div>
-
-      <div className="panel workspace-module-shell">
+    <StudioLayout>
+      <div className="studio-content">
+        <div className="studio-header">
+          <h1 className="studio-title">视频生成</h1>
+          <p className="studio-subtitle">将图片转换为动态视频内容</p>
+        </div>
         <StandaloneVideoStudio
           assets={state.videoAssets}
           jobs={state.videoJobs}
           referenceImage={state.referenceImage}
           referenceEndImage={state.referenceEndImage}
+          imageAssets={state.imageAssets}
         />
       </div>
-    </main>
+    </StudioLayout>
   );
 }

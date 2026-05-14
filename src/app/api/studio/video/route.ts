@@ -9,6 +9,9 @@ export async function POST(request: Request) {
     prompt?: string;
     aspectRatio?: string;
     duration?: number;
+    model?: string;
+    selectedStartImageId?: string | null;
+    selectedEndImageId?: string | null;
   };
 
   const prompt = body.prompt?.trim() || "";
@@ -20,7 +23,10 @@ export async function POST(request: Request) {
     session.email,
     prompt,
     body.aspectRatio,
-    body.duration
+    body.duration,
+    body.selectedStartImageId,
+    body.selectedEndImageId,
+    body.model
   );
 
   // 异步模式：立即返回job状态，不等待asset生成完成

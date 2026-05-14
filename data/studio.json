@@ -1,0 +1,156 @@
+{
+  "1670867932@qq.com": {
+    "imageJobs": [
+      {
+        "id": "job_sfdfp6nj",
+        "kind": "image",
+        "status": "succeeded",
+        "createdAt": "2026-05-11T14:25:12.163Z",
+        "message": "已完成独立图片生成"
+      },
+      {
+        "id": "job_gcos7lwv",
+        "kind": "image",
+        "status": "succeeded",
+        "createdAt": "2026-05-11T09:47:58.574Z",
+        "message": "已完成独立图片生成"
+      }
+    ],
+    "imageAssets": [
+      {
+        "id": "asset_wkq6g5fg",
+        "kind": "image",
+        "title": "独立图片结果",
+        "prompt": "亚洲女团",
+        "previewUrl": "/api/studio/assets/asset_wkq6g5fg",
+        "createdAt": "2026-05-11T14:25:24.083Z",
+        "source": "jimeng",
+        "storagePath": "asset_wkq6g5fg.jpg",
+        "originalUrl": "https://p3-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/20260511222523A351C97FCD57F4DAD4C3-2178-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1778595923&x-signature=Dwvf0lpYawhghUZCrpkveybrCtA%3D"
+      },
+      {
+        "id": "asset_u3nggdfn",
+        "kind": "image",
+        "title": "独立图片结果",
+        "prompt": "超人",
+        "previewUrl": "/api/studio/assets/asset_u3nggdfn",
+        "createdAt": "2026-05-11T09:48:12.480Z",
+        "source": "jimeng",
+        "storagePath": "asset_u3nggdfn.jpg",
+        "originalUrl": "https://p3-aiop-sign.byteimg.com/tos-cn-i-vuqhorh59i/20260511174811A519B100FA66C6C449F0-5049-0~tplv-vuqhorh59i-image-v1.image?rk3s=7f9e702d&x-expires=1778579291&x-signature=9afs9v93jS8Do%2FMJZwOdWtgnmcc%3D"
+      }
+    ],
+    "videoJobs": [
+      {
+        "id": "job_na9opuzg",
+        "kind": "video",
+        "status": "succeeded",
+        "createdAt": "2026-05-11T14:58:53.940Z",
+        "message": "已完成独立视频生成"
+      },
+      {
+        "id": "job_k8zf8e38",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:54:14.184Z",
+        "message": "Jimeng video submit failed: HTTP 401"
+      },
+      {
+        "id": "job_xgbg24p7",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:51:05.239Z",
+        "message": "Jimeng video submit failed: Access Denied: Access Denied (request_id: 2026051122510566C8999BE6DC86C2A0A8)"
+      },
+      {
+        "id": "job_tgfee38r",
+        "kind": "video",
+        "status": "succeeded",
+        "createdAt": "2026-05-11T14:41:08.505Z",
+        "message": "已完成独立视频生成"
+      },
+      {
+        "id": "job_awmde1to",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:28:42.117Z",
+        "message": "Seeddance submit failed: HTTP 404 - "
+      },
+      {
+        "id": "job_p5ehb7l1",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:25:46.822Z",
+        "message": "Seeddance submit failed: HTTP 404 - "
+      },
+      {
+        "id": "job_1ruxsera",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:22:45.616Z",
+        "message": "Seeddance submit failed: HTTP 404"
+      },
+      {
+        "id": "job_8i3zwrgx",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-11T14:07:07.126Z",
+        "message": "terminated"
+      },
+      {
+        "id": "job_te7bji0l",
+        "kind": "video",
+        "status": "succeeded",
+        "createdAt": "2026-05-11T10:11:46.423Z",
+        "message": "已完成独立视频生成"
+      },
+      {
+        "id": "job_rnnkkv2s",
+        "kind": "video",
+        "status": "failed",
+        "createdAt": "2026-05-10T06:08:11.535Z",
+        "message": "Jimeng video polling failed: Text Risk Not Pass (request_id: 20260510140832CA14F7C245DEAB49C278)"
+      }
+    ],
+    "videoAssets": [
+      {
+        "id": "asset_btl7lr63",
+        "kind": "video",
+        "title": "独立视频片段",
+        "prompt": "美女唱歌",
+        "previewUrl": "/api/studio/assets/asset_btl7lr63",
+        "createdAt": "2026-05-11T15:01:44.308Z",
+        "source": "jimeng",
+        "storagePath": "asset_btl7lr63.mp4",
+        "originalUrl": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-5-pro/02177851164536400000000000000000000ffffac182f9aa74a4b.mp4?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20260511%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20260511T150142Z&X-Tos-Expires=86400&X-Tos-Signature=3ec605ac0f7f7fd3d2b049e09cbf7f97c409978c257f535f8bc53801d297a05f&X-Tos-SignedHeaders=host",
+        "durationSec": 5
+      },
+      {
+        "id": "asset_dv368dhv",
+        "kind": "video",
+        "title": "独立视频片段",
+        "prompt": "图中女团唱歌",
+        "previewUrl": "/api/studio/assets/asset_dv368dhv",
+        "createdAt": "2026-05-11T14:41:36.834Z",
+        "source": "jimeng",
+        "storagePath": "asset_dv368dhv.mp4",
+        "originalUrl": "https://v3-aiop.aigc-cloud.com/4019aa6a7ba34a653662b4eb7d902899/6a01f8b4/video/tos/cn/tos-cn-v-242bcc/a501f57728f344f4a28ac9c5589aa9c7/?a=764792&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=5878&bt=5878&cs=0&ds=3&ft=GbtG6uO3pyygZmo0P845UgkVQ9w6x&mime_type=video_mp4&qs=13&rc=anA7NzNrbzh4OzgzNGczM0BpanA7NzNrbzh4OzgzNGczM0BmXmFxcWcvaS1hLS1kXjBzYSNmXmFxcWcvaS1hLS1kXjBzcw%3D%3D&btag=80000e00008000&dy_q=1778510495&l=20260511224134E4746E919138A5892B86",
+        "durationSec": 5
+      },
+      {
+        "id": "asset_q8t4kxdm",
+        "kind": "video",
+        "title": "独立视频片段",
+        "prompt": "超人飞到中国",
+        "previewUrl": "/api/studio/assets/asset_q8t4kxdm",
+        "createdAt": "2026-05-11T10:12:14.123Z",
+        "source": "jimeng",
+        "storagePath": "asset_q8t4kxdm.mp4",
+        "originalUrl": "https://v26-aiop.aigc-cloud.com/ae748b564ded877172c9088d1c6aa7ff/6a01b991/video/tos/cn/tos-cn-v-242bcc/6f513a6b6728470ca9a601022b25638a/?a=764792&ch=0&cr=0&dr=0&er=0&lr=default&cd=0%7C0%7C0%7C0&br=4745&bt=4745&cs=0&ds=3&ft=GbtG6uO3pyygZmo0P4RAUgkVQ9w6x&mime_type=video_mp4&qs=13&rc=amQ0NGlrb3Z0OzgzNGczM0BpamQ0NGlrb3Z0OzgzNGczM0Bsb2hzcWduai1hLS1kXjBzYSNsb2hzcWduai1hLS1kXjBzcw%3D%3D&btag=c0000e00008000&dy_q=1778494332&l=20260511181212A794E9F45DA62AAE453B",
+        "durationSec": 5
+      }
+    ],
+    "referenceImage": null,
+    "referenceEndImage": null
+  }
+}

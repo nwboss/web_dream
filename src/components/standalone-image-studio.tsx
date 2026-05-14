@@ -13,19 +13,12 @@ type StandaloneImageStudioProps = {
 };
 
 const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
-const styles = [
-  { value: "国漫", label: "国漫" },
-  { value: "电影感", label: "电影" },
-  { value: "细腻", label: "细腻" },
-  { value: "悬疑", label: "悬疑" }
-] as const;
 
 export function StandaloneImageStudio({ assets, jobs, referenceImage }: StandaloneImageStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>("9:16");
-  const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]["value"]>("国漫");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const latestAsset = assets.find((asset) => asset.id === selectedAssetId) || assets[0];
@@ -57,8 +50,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
         },
         body: JSON.stringify({
           ...payload,
-          aspectRatio: selectedAspectRatio,
-          stylePreset: selectedStyle
+          aspectRatio: selectedAspectRatio
         })
       });
       const data = (await response.json()) as { ok: boolean; message?: string };
@@ -120,7 +112,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
 
   return (
     <div className="workspace-module-stack">
-      <form className="workspace-editor panel studio-editor" onSubmit={handleSubmit}>
+      <form className="panel studio-editor" onSubmit={handleSubmit}>
         <div className="studio-compose-grid is-single">
           <div className="studio-reference-card">
             <div className="studio-reference-head">
@@ -160,20 +152,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                   </button>
                 ))}
               </div>
-              <div className="studio-chip-group">
-                {styles.map((style) => (
-                  <button
-                    key={style.value}
-                    className={`studio-chip ${selectedStyle === style.value ? "is-active" : ""}`}
-                    type="button"
-                    onClick={() => setSelectedStyle(style.value)}
-                  >
-                    {style.label}
-                  </button>
-                ))}
-              </div>
               <button className="btn btn-primary studio-submit-btn" type="submit" disabled={isPending}>
-                {isPending ? "生成中..." : "生成"}
+                {isPending ? "生成中..." : "生成图片"}
               </button>
             </div>
           </div>
@@ -187,36 +167,37 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
       </form>
 
       <section className="panel studio-panel">
-        {latestAsset ? (
-          <article className="studio-hero-result">
-            <img className="result-preview" src={latestAsset.previewUrl} alt={latestAsset.title} />
-            <div className="result-meta">
-              <span className="muted">{new Date(latestAsset.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-              {latestAsset.originalUrl && (
-                <a className="result-link" href={latestAsset.originalUrl} target="_blank" rel="noreferrer">
-                  查看原图
-                </a>
-              )}
-            </div>
-          </article>
+        <div className="section-header">
+          <h3 className="section-title">生成历史</h3>
+          <a href="/assets" className="link-accent">
+            查看全部 →
+          </a>
+        </div>
+
+        {assets.length > 0 ? (
+          <div className="studio-result-grid-compact">
+            {assets.slice(0, 6).map((asset) => (
+              <div key={asset.id} className="result-card-compact">
+                <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
+                <div className="result-card-overlay">
+                  {asset.originalUrl && (
+                    <a
+                      className="result-link-btn"
+                      href={asset.originalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      查看
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="studio-empty-result">
-            <p className="muted">暂无结果</p>
-          </div>
-        )}
-
-        {assets.length > 1 && (
-          <div className="studio-result-grid">
-            {assets.map((asset) => (
-              <button
-                className={`result-card ${latestAsset?.id === asset.id ? "is-active" : ""}`}
-                key={asset.id}
-                type="button"
-                onClick={() => setSelectedAssetId(asset.id)}
-              >
-                <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
-              </button>
-            ))}
+            <p className="muted">暂无生成结果</p>
           </div>
         )}
       </section>

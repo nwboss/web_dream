@@ -1,7 +1,5 @@
-import Link from "next/link";
-
 import { StandaloneImageStudio } from "@/components/standalone-image-studio";
-import { StudioModuleNav } from "@/components/studio-module-nav";
+import { StudioLayout } from "@/components/studio-layout";
 import { requireSession } from "@/lib/session";
 import { getStudioState } from "@/lib/studio-store";
 
@@ -12,17 +10,14 @@ export default async function ImageStudioPage() {
   const state = await getStudioState(session.email);
 
   return (
-    <main className="shell workspace-layout">
-      <div className="workspace-topbar">
-        <StudioModuleNav active="image" />
-        <Link className="btn btn-ghost" href="/account">
-          账户
-        </Link>
-      </div>
-
-      <div className="panel workspace-module-shell">
+    <StudioLayout>
+      <div className="studio-content">
+        <div className="studio-header">
+          <h1 className="studio-title">图片生成</h1>
+          <p className="studio-subtitle">使用 AI 快速生成高质量漫画风格图片</p>
+        </div>
         <StandaloneImageStudio assets={state.imageAssets} jobs={state.imageJobs} referenceImage={state.referenceImage} />
       </div>
-    </main>
+    </StudioLayout>
   );
 }

@@ -3,15 +3,18 @@ import Link from "next/link";
 const features = [
   {
     title: "AI 图片生成",
-    description: "基于即梦引擎，快速生成高质量漫画风格图片"
+    description: "基于即梦引擎，快速生成高质量漫画风格图片",
+    icon: "🎨"
   },
   {
     title: "AI 视频生成",
-    description: "图片一键生成动态视频，打造完整漫剧内容"
+    description: "图片一键生成动态视频，打造完整漫剧内容",
+    icon: "🎬"
   },
   {
     title: "项目管理",
-    description: "统一管理创作项目，支持多版本素材对比"
+    description: "统一管理创作项目，多版本素材对比",
+    icon: "📋"
   }
 ];
 
@@ -19,35 +22,39 @@ export default function HomePage() {
   return (
     <main>
       <section className="shell hero">
-        <div className="hero-card">
-          <span className="eyebrow">AI 漫剧创作工作台</span>
-          <h1>用 AI 创作漫剧内容</h1>
-          <p>
-            快速生成高质量图片和视频，打造完整的漫剧作品
+        <div className="hero-card hero-main">
+          <span className="eyebrow">AI 漫剧创作平台</span>
+          <h1>AI 驱动的漫剧创作</h1>
+          <p className="hero-description">
+            基于即梦引擎，轻松生成高质量图片和视频<br/>
+            让创意快速变为现实
           </p>
 
           <div className="hero-actions">
             <Link className="btn btn-primary" href="/register">
-              开始创作
+              立即开始
             </Link>
             <Link className="btn btn-secondary" href="/login">
-              登录
+              登录账户
             </Link>
           </div>
         </div>
 
-        <div className="hero-card">
+        <div className="hero-card hero-stats">
           <div className="metrics">
             <div className="metric">
-              <strong>AI 生成</strong>
-              <span>即梦引擎驱动</span>
+              <div className="metric-icon">⚡</div>
+              <strong>快速生成</strong>
+              <span>秒级响应</span>
             </div>
             <div className="metric">
-              <strong>图片 + 视频</strong>
-              <span>一站式创作</span>
+              <div className="metric-icon">🎯</div>
+              <strong>精准控制</strong>
+              <span>首尾帧支持</span>
             </div>
             <div className="metric">
-              <strong>云端管理</strong>
+              <div className="metric-icon">☁️</div>
+              <strong>云端存储</strong>
               <span>随时访问</span>
             </div>
           </div>
@@ -64,6 +71,7 @@ export default function HomePage() {
         <div className="grid-3">
           {features.map((feature) => (
             <article className="feature-card" key={feature.title}>
+              <div className="feature-icon">{feature.icon}</div>
               <h3>{feature.title}</h3>
               <p>{feature.description}</p>
             </article>
@@ -71,25 +79,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="shell">
+      <section className="shell cta-section">
         <div className="cta-banner">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <div>
-              <h2>立即开始创作</h2>
-            </div>
-            <div className="hero-actions">
-              <Link className="btn btn-primary" href="/register">
-                注册账号
-              </Link>
-              <Link className="btn btn-secondary" href="/dashboard">
-                查看控制台
-              </Link>
-            </div>
+          <div className="cta-content">
+            <h2>准备好开始了吗？</h2>
+            <p>加入我们，开启 AI 创作之旅</p>
+          </div>
+          <div className="hero-actions">
+            <Link className="btn btn-primary" href="/register">
+              免费注册
+            </Link>
+            <Link className="btn btn-secondary" href="/login">
+              立即登录
+            </Link>
           </div>
         </div>
       </section>
 
-      <footer className="shell footer">即梦漫剧工坊</footer>
+      <footer className="shell footer">
+        <p>即梦工坊 - AI 驱动的漫剧创作平台</p>
+      </footer>
     </main>
   );
 }
