@@ -34,8 +34,18 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   const [showImageSelector, setShowImageSelector] = useState(false);
   const [showMultimodal, setShowMultimodal] = useState(false);
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
+  const [isDraggingStart, setIsDraggingStart] = useState(false);
+  const [isDraggingEnd, setIsDraggingEnd] = useState(false);
+  const [isDraggingMultimodal, setIsDraggingMultimodal] = useState(false);
+  const [showFrameSelector, setShowFrameSelector] = useState(false);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState("");
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [cursorPosition, setCursorPosition] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileEndInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const allJobs = [...pendingJobs, ...jobs];
 
   useEffect(() => {
@@ -123,6 +133,219 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     });
   }
 
+  // 拖拽处理函数
+  const handleDragOver = (e: React.DragEvent, type: 'start' | 'end') => {
+    e.preventDefault();
+    if (type === 'start') {
+      setIsDraggingStart(true);
+    } else {
+      setIsDraggingEnd(true);
+    }
+  };
+
+  const handleDragLeave = (type: 'start' | 'end') => {
+    if (type === 'start') {
+      setIsDraggingStart(false);
+    } else {
+      setIsDraggingEnd(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, type: 'start' | 'end') => {
+    e.preventDefault();
+    setIsDraggingStart(false);
+    setIsDraggingEnd(false);
+
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const file = files[0];
+    const endpoint = type === 'start' ? '/api/studio/reference' : '/api/studio/reference-end';
+
+    startTransition(async () => {
+      setMessage("");
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(endpoint, { method: "POST", body: formData });
+      const data = (await response.json()) as { ok: boolean; message?: string };
+
+      if (!response.ok || !data.ok) {
+        setMessage(data.message || `${type === 'start' ? '首帧' : '尾帧'}上传失败。`);
+        return;
+      }
+
+      setMessage(`${type === 'start' ? '首帧' : '尾帧'}已上传。`);
+      router.refresh();
+    });
+  };
+
+  // @ 提及处理函数
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentionMenu && e.key === 'Escape') {
+      e.preventDefault();
+      setShowMentionMenu(false);
+    }
+  };
+
+  const handleTextareaInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    const value = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex !== -1 && cursorPos - lastAtIndex <= 20) {
+      const filter = textBeforeCursor.substring(lastAtIndex + 1);
+      if (!filter.includes(' ') && !filter.includes('\n')) {
+        setMentionFilter(filter);
+
+        // 更新菜单位置 - 显示在输入框上方
+        const rect = textarea.getBoundingClientRect();
+
+        const position = {
+          top: rect.top - 210, // 输入框上方210px
+          left: rect.left + 10
+        };
+        setMentionPosition(position);
+        setCursorPosition(cursorPos);
+        setShowMentionMenu(true);
+      } else {
+        setShowMentionMenu(false);
+      }
+    } else {
+      setShowMentionMenu(false);
+    }
+  };
+
+  const insertMention = (imageTitle: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const value = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const textAfterCursor = value.substring(cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex === -1) return;
+
+    const newValue = textBeforeCursor.substring(0, lastAtIndex) + `@${imageTitle} ` + textAfterCursor;
+    textarea.value = newValue;
+
+    const newCursorPos = lastAtIndex + imageTitle.length + 2;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+
+    setShowMentionMenu(false);
+  };
+
+  // 根据模型构建可引用的文件列表
+  const getMentionableFiles = () => {
+    const files: Array<{ id: string; title: string; previewUrl: string; type?: string }> = [];
+
+    if (selectedModel === "doubao-seedance-2-0-260128") {
+      // Seeddance 2.0: 引用所有多模态文件
+      referenceFiles.forEach((file, index) => {
+        files.push({
+          id: file.id,
+          title: `${file.type === 'image' ? '图片' : file.type === 'video' ? '视频' : '音频'}${index + 1}`,
+          previewUrl: file.previewUrl,
+          type: file.type
+        });
+      });
+    } else {
+      // Seeddance 1.5 Pro / 即梦: 引用首尾帧
+      if (referenceImage) {
+        files.push({
+          id: 'reference-start',
+          title: '首帧',
+          previewUrl: referenceImage.previewUrl
+        });
+      }
+      if (referenceEndImage) {
+        files.push({
+          id: 'reference-end',
+          title: '尾帧',
+          previewUrl: referenceEndImage.previewUrl
+        });
+      }
+    }
+
+    return files;
+  };
+
+  const mentionableFiles = getMentionableFiles();
+  const filteredImageAssets = mentionableFiles.filter(asset =>
+    asset.title.toLowerCase().includes(mentionFilter.toLowerCase())
+  );
+
+  // 多模态文件拖拽处理
+  const handleMultimodalDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingMultimodal(true);
+  };
+
+  const handleMultimodalDragLeave = () => {
+    setIsDraggingMultimodal(false);
+  };
+
+  const handleMultimodalDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingMultimodal(false);
+
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.type.startsWith('image/') || f.type.startsWith('video/') || f.type.startsWith('audio/')
+    );
+
+    if (files.length === 0) {
+      setMessage("请拖入图片、视频或音频文件");
+      return;
+    }
+
+    // 检查文件数量限制
+    const imageCount = referenceFiles.filter(f => f.type === 'image').length;
+    const videoCount = referenceFiles.filter(f => f.type === 'video').length;
+    const audioCount = referenceFiles.filter(f => f.type === 'audio').length;
+
+    for (const file of files) {
+      let canUpload = false;
+
+      if (file.type.startsWith('image/') && imageCount < 9) {
+        canUpload = true;
+      } else if (file.type.startsWith('video/') && videoCount < 3) {
+        canUpload = true;
+      } else if (file.type.startsWith('audio/') && audioCount < 3) {
+        canUpload = true;
+      }
+
+      if (!canUpload) {
+        setMessage(`文件数量已达上限（图${imageCount}/9，视${videoCount}/3，音${audioCount}/3）`);
+        continue;
+      }
+
+      startTransition(async () => {
+        setMessage("");
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const response = await fetch('/api/studio/reference-files', { method: 'POST', body: formData });
+          const data = (await response.json()) as { ok: boolean; message?: string };
+
+          if (!response.ok || !data.ok) {
+            setMessage(data.message || `${file.name} 上传失败`);
+            return;
+          }
+
+          setMessage(`${file.name} 已上传`);
+          router.refresh();
+        } catch (error) {
+          setMessage(`${file.name} 上传失败`);
+        }
+      });
+    }
+  };
+
   return (
     <div className="chat-studio-container">
       {/* 历史记录区域 */}
@@ -186,18 +409,106 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       <form className="chat-input-area" onSubmit={handleSubmit}>
         <div className="chat-input-wrapper">
           {/* 参考图预览 */}
-          {(referenceImage || selectedStartImageId || selectedEndImageId || (selectedModel === "doubao-seedance-2-0-260128" && referenceFiles.length > 0)) && (
+          {(referenceImage || referenceEndImage || selectedStartImageId || selectedEndImageId || (selectedModel === "doubao-seedance-2-0-260128" && referenceFiles.length > 0)) && (
             <div className="chat-references">
               {referenceImage && (
-                <div className="chat-reference-preview">
-                  <img src={referenceImage.previewUrl} alt="首帧" />
+                <div
+                  className="chat-reference-preview"
+                  style={{ position: 'relative' }}
+                  onDragOver={(e) => handleDragOver(e, 'start')}
+                  onDragLeave={() => handleDragLeave('start')}
+                  onDrop={(e) => handleDrop(e, 'start')}
+                >
+                  <img src={referenceImage.previewUrl} alt="首帧" style={{ opacity: isDraggingStart ? 0.5 : 1 }} />
                   <div className="chat-reference-label">首帧</div>
+                  {isDraggingStart && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      border: '2px dashed var(--accent)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>
+                      替换首帧
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fetch("/api/studio/reference", { method: "DELETE" })
+                        .then(() => router.refresh())
+                        .catch(console.error);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.8)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
               {referenceEndImage && (
-                <div className="chat-reference-preview">
-                  <img src={referenceEndImage.previewUrl} alt="尾帧" />
+                <div
+                  className="chat-reference-preview"
+                  style={{ position: 'relative' }}
+                  onDragOver={(e) => handleDragOver(e, 'end')}
+                  onDragLeave={() => handleDragLeave('end')}
+                  onDrop={(e) => handleDrop(e, 'end')}
+                >
+                  <img src={referenceEndImage.previewUrl} alt="尾帧" style={{ opacity: isDraggingEnd ? 0.5 : 1 }} />
                   <div className="chat-reference-label">尾帧</div>
+                  {isDraggingEnd && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      border: '2px dashed var(--accent)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>
+                      替换尾帧
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fetch("/api/studio/reference-end", { method: "DELETE" })
+                        .then(() => router.refresh())
+                        .catch(console.error);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.8)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
               {selectedStartImageId && (
@@ -229,10 +540,76 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
               <button type="button" className="chat-tool-btn" onClick={() => setShowImageSelector(!showImageSelector)} title="选择参考图">
                 🖼️
               </button>
+              {selectedModel === "doubao-seedance-1-5-pro-251215" && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleUpload}
+                  />
+                  <input
+                    ref={fileEndInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+
+                      startTransition(async () => {
+                        setMessage("");
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        const response = await fetch("/api/studio/reference-end", { method: "POST", body: formData });
+                        const data = (await response.json()) as { ok: boolean; message?: string };
+
+                        if (!response.ok || !data.ok) {
+                          setMessage(data.message || "尾帧上传失败。");
+                          return;
+                        }
+
+                        setMessage("尾帧已上传。");
+                        router.refresh();
+                      });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="chat-tool-btn"
+                    onClick={() => setShowFrameSelector(!showFrameSelector)}
+                    title="上传首尾帧（或拖拽图片到预览区域）"
+                    style={{ position: 'relative' }}
+                  >
+                    🎬 首尾帧
+                  </button>
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    padding: '0 8px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    💡 拖拽图片或点击按钮
+                  </div>
+                </>
+              )}
               {selectedModel === "doubao-seedance-2-0-260128" && (
-                <button type="button" className="chat-tool-btn" onClick={() => setShowMultimodal(!showMultimodal)} title="多模态参考">
-                  📁
-                </button>
+                <>
+                  <button type="button" className="chat-tool-btn" onClick={() => setShowMultimodal(!showMultimodal)} title="多模态参考（支持拖拽上传）">
+                    📁
+                  </button>
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    padding: '0 8px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    💡 支持拖拽多个文件
+                  </div>
+                </>
               )}
 
               <div className="chat-model-select">
@@ -275,6 +652,80 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                 />
               </div>
             </div>
+
+            {/* 首尾帧上传选择器 */}
+            {showFrameSelector && selectedModel === "doubao-seedance-1-5-pro-251215" && (
+              <div className="chat-image-selector">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>上传首尾帧</span>
+                  <button type="button" onClick={() => setShowFrameSelector(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>×</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setShowFrameSelector(false);
+                    }}
+                    style={{
+                      padding: '32px 16px',
+                      background: 'var(--bg-secondary)',
+                      border: '2px dashed var(--line)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent)';
+                      e.currentTarget.style.background = 'var(--panel-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--line)';
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
+                    }}
+                  >
+                    <div style={{ fontSize: '32px' }}>🎬</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600 }}>上传首帧</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>视频的第一帧</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fileEndInputRef.current?.click();
+                      setShowFrameSelector(false);
+                    }}
+                    style={{
+                      padding: '32px 16px',
+                      background: 'var(--bg-secondary)',
+                      border: '2px dashed var(--line)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent)';
+                      e.currentTarget.style.background = 'var(--panel-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--line)';
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
+                    }}
+                  >
+                    <div style={{ fontSize: '32px' }}>🎞️</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600 }}>上传尾帧</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>视频的最后一帧</div>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* 图片选择器弹出 */}
             {showImageSelector && imageAssets.length > 0 && (
@@ -322,11 +773,45 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
 
             {/* 多模态文件选择器 */}
             {showMultimodal && selectedModel === "doubao-seedance-2-0-260128" && (
-              <div className="chat-multimodal-selector">
+              <div
+                className="chat-multimodal-selector"
+                onDragOver={handleMultimodalDragOver}
+                onDragLeave={handleMultimodalDragLeave}
+                onDrop={handleMultimodalDrop}
+                style={{
+                  position: 'relative',
+                  border: isDraggingMultimodal ? '2px dashed var(--accent)' : undefined,
+                  background: isDraggingMultimodal ? 'rgba(99, 102, 241, 0.05)' : undefined,
+                  transition: 'all 0.2s'
+                }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>多模态参考 (图{referenceFiles.filter(f => f.type === 'image').length}/9 视{referenceFiles.filter(f => f.type === 'video').length}/3 音{referenceFiles.filter(f => f.type === 'audio').length}/3)</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                    多模态参考 (图{referenceFiles.filter(f => f.type === 'image').length}/9 视{referenceFiles.filter(f => f.type === 'video').length}/3 音{referenceFiles.filter(f => f.type === 'audio').length}/3)
+                  </span>
                   <button type="button" onClick={() => setShowMultimodal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>×</button>
                 </div>
+
+                {isDraggingMultimodal && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '2px dashed var(--accent)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: 'var(--accent)',
+                    zIndex: 10,
+                    pointerEvents: 'none'
+                  }}>
+                    📎 拖放文件到这里
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
                   {referenceFiles.map((file) => (
                     <div key={file.id} style={{ position: 'relative', border: '1px solid var(--line)', borderRadius: '6px', overflow: 'hidden' }}>
@@ -346,22 +831,36 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                       </button>
                     </div>
                   ))}
-                  <label style={{ width: '100%', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--line)', borderRadius: '6px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)' }}>
+                  <label style={{ width: '100%', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '4px', border: '2px dashed var(--line)', borderRadius: '6px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent)';
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--line)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                    }}
+                  >
                     <input
                       type="file"
                       accept="image/*,video/*,audio/*"
+                      multiple
                       style={{ display: 'none' }}
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        fetch('/api/studio/reference-files', { method: 'POST', body: formData })
-                          .then(() => router.refresh())
-                          .catch(console.error);
+                        const files = e.target.files;
+                        if (!files) return;
+
+                        Array.from(files).forEach(file => {
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          fetch('/api/studio/reference-files', { method: 'POST', body: formData })
+                            .then(() => router.refresh())
+                            .catch(console.error);
+                        });
                       }}
                     />
                     <span style={{ fontSize: '24px' }}>+</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>点击或拖拽</span>
                   </label>
                 </div>
               </div>
@@ -373,20 +872,120 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                 ⚠️ 即梦视频 2.0 不支持尾帧，将忽略尾帧设置
               </div>
             )}
+            {selectedModel === "doubao-seedance-1-5-pro-251215" && ((referenceImage && referenceEndImage) || (selectedStartImageId && selectedEndImageId)) && selectedDuration !== 5 && (
+              <div style={{ fontSize: '12px', color: 'var(--warning)', padding: '4px 0' }}>
+                ℹ️ Seeddance 1.5 Pro 首尾帧模式仅支持5秒时长，将自动调整为5秒
+              </div>
+            )}
 
             {/* 输入框和发送按钮 */}
-            <div className="chat-input-row">
+            <div className="chat-input-row" style={{ position: 'relative' }}>
               <textarea
+                ref={textareaRef}
                 id="prompt"
                 name="prompt"
                 rows={3}
-                placeholder="描述你想生成的视频..."
+                placeholder="描述你想生成的视频... (输入 @ 可引用图片)"
                 required
                 className="chat-textarea"
+                onKeyDown={handleTextareaKeyDown}
+                onInput={handleTextareaInput}
               />
               <button className="chat-send-btn" type="submit" disabled={isPending}>
                 {isPending ? "⏳" : "→"}
               </button>
+
+              {/* @ 提及菜单 */}
+              {showMentionMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '0',
+                  marginBottom: '8px',
+                  background: 'var(--panel)',
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  zIndex: 10000,
+                  minWidth: '260px',
+                  padding: '4px'
+                }}>
+                  {filteredImageAssets.length > 0 ? (
+                    filteredImageAssets.map((asset) => (
+                      <div
+                        key={asset.id}
+                        onClick={() => insertMention(asset.title)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                          borderRadius: '6px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {asset.type === 'audio' ? (
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '4px',
+                            background: 'var(--bg-secondary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '20px'
+                          }}>
+                            🎵
+                          </div>
+                        ) : asset.type === 'video' ? (
+                          <video
+                            src={asset.previewUrl}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '4px',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={asset.previewUrl}
+                            alt={asset.title}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '4px',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500 }}>{asset.title}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{
+                      padding: '16px',
+                      textAlign: 'center',
+                      color: 'var(--text-muted)',
+                      fontSize: '13px'
+                    }}>
+                      暂无可引用的文件<br/>
+                      <span style={{ fontSize: '11px' }}>
+                        {selectedModel === "doubao-seedance-2-0-260128"
+                          ? '请先上传多模态文件（图片/视频/音频）'
+                          : '请先上传首帧或尾帧图片'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

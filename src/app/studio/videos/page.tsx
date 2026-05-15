@@ -1,4 +1,4 @@
-import { StandaloneVideoStudio } from "@/components/standalone-video-studio";
+import { StandaloneVideoStudio } from "@/components/standalone-video-studio-fresh";
 import { StudioLayout } from "@/components/studio-layout";
 import { requireSession } from "@/lib/session";
 import { getStudioState } from "@/lib/studio-store";

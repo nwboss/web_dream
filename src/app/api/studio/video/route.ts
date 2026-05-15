@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     model?: string;
     selectedStartImageId?: string | null;
     selectedEndImageId?: string | null;
+    referencedFileIds?: string[];
   };
 
   const prompt = body.prompt?.trim() || "";
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
     body.duration,
     body.selectedStartImageId,
     body.selectedEndImageId,
-    body.model
+    body.model,
+    body.referencedFileIds
   );
 
   // 异步模式：立即返回job状态，不等待asset生成完成

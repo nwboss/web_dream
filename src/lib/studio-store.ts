@@ -386,7 +386,8 @@ async function processVideoGenerationInBackground(
   referenceImageBase64?: string,
   referenceEndImageBase64?: string,
   model?: string,
-  useMultimodal?: boolean
+  useMultimodal?: boolean,
+  referencedFileIds?: string[]
 ) {
   try {
     // 如果使用多模态模式，读取referenceFiles
@@ -396,7 +397,13 @@ async function processVideoGenerationInBackground(
       const record = ensureUserRecord(store, ownerEmail);
 
       multimodalReferences = [];
-      for (const file of record.referenceFiles || []) {
+
+      // 如果指定了引用的文件ID，只使用这些文件；否则使用所有文件
+      const filesToUse = referencedFileIds && referencedFileIds.length > 0
+        ? (record.referenceFiles || []).filter(file => referencedFileIds.includes(file.id))
+        : (record.referenceFiles || []);
+
+      for (const file of filesToUse) {
         try {
           const fileBuffer = await readFile(path.join(assetsDir, file.storagePath));
           multimodalReferences.push({
@@ -476,7 +483,8 @@ export async function generateStandaloneVideo(
   duration?: number,
   selectedStartImageId?: string | null,
   selectedEndImageId?: string | null,
-  model?: string
+  model?: string,
+  referencedFileIds?: string[]
 ) {
   const store = await ensureStore();
   const record = ensureUserRecord(store, ownerEmail);
@@ -559,7 +567,8 @@ export async function generateStandaloneVideo(
       referenceImageBase64,
       referenceEndImageBase64,
       model,
-      useMultimodal
+      useMultimodal,
+      referencedFileIds
     ).catch((error) => {
       console.error("[Video Generation] Background process error:", error);
     });
