@@ -23,24 +23,23 @@ export default function HomePage() {
     <main>
       <section className="shell hero">
         <div className="hero-card hero-main">
-          <span className="eyebrow">AI 漫剧创作平台</span>
-          <h1>AI 驱动的漫剧创作</h1>
+          <span className="eyebrow">✨ AI 漫剧创作平台</span>
+          <h1>用 AI 创造精彩漫剧</h1>
           <p className="hero-description">
-            基于即梦引擎，轻松生成高质量图片和视频<br/>
-            让创意快速变为现实
+            基于先进的即梦引擎，轻松生成高质量图片和视频
+            <br />
+            让每一个创意想法都能快速变为现实
           </p>
 
           <div className="hero-actions">
             <Link className="btn btn-primary" href="/register">
-              立即开始
+              立即开始创作
             </Link>
             <Link className="btn btn-secondary" href="/login">
               登录账户
             </Link>
           </div>
-        </div>
 
-        <div className="hero-card hero-stats">
           <div className="metrics">
             <div className="metric">
               <div className="metric-icon">⚡</div>
@@ -63,9 +62,8 @@ export default function HomePage() {
 
       <section className="shell section" id="features">
         <div className="section-head">
-          <div>
-            <h2>核心功能</h2>
-          </div>
+          <h2>强大功能，简单易用</h2>
+          <p>提供从图片生成到视频制作的全流程创作工具</p>
         </div>
 
         <div className="grid-3">
@@ -80,7 +78,7 @@ export default function HomePage() {
       </section>
 
       <footer className="shell footer">
-        <p>即梦工坊 - AI 驱动的漫剧创作平台</p>
+        <p>© 2024 即梦工坊 · AI 驱动的漫剧创作平台</p>
       </footer>
     </main>
   );
