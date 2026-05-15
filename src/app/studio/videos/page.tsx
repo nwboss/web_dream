@@ -22,6 +22,7 @@ export default async function VideoStudioPage() {
           referenceImage={state.referenceImage}
           referenceEndImage={state.referenceEndImage}
           imageAssets={state.imageAssets}
+          referenceFiles={state.referenceFiles}
         />
       </div>
     </StudioLayout>

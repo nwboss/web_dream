@@ -25,9 +25,11 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>("9:16");
   const [selectedModel, setSelectedModel] = useState<typeof imageModels[number]["value"]>("jimeng-3.1");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
+  const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const latestAsset = assets.find((asset) => asset.id === selectedAssetId) || assets[0];
   const latestJob = jobs[0];
+  const allJobs = [...pendingJobs, ...jobs];
 
   useEffect(() => {
     if (!assets.length) {
@@ -54,10 +56,29 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
     }
   }, [jobs, router]);
 
+  useEffect(() => {
+    // 清理已经出现在真实 jobs 中的 pending jobs
+    if (pendingJobs.length > 0) {
+      setPendingJobs(prev => prev.filter(pj => !jobs.some(j => j.id === pj.id)));
+    }
+  }, [jobs, pendingJobs.length]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
+    const prompt = payload.prompt as string;
+
+    // 立即创建一个临时 job 显示在界面上
+    const tempJob: Job = {
+      id: `temp-${Date.now()}`,
+      kind: "image",
+      status: "processing",
+      createdAt: new Date().toISOString(),
+      message: prompt,
+      name: `图片 #${jobs.filter(j => j.kind === 'image').length + pendingJobs.length + 1}`
+    };
+    setPendingJobs(prev => [tempJob, ...prev]);
 
     startTransition(async () => {
       setMessage("");
@@ -76,6 +97,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
 
       if (!response.ok || !data.ok) {
         setMessage(data.message || "图片生成失败，请稍后再试。");
+        // 移除临时 job
+        setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
         return;
       }
 
@@ -130,38 +153,84 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
   }
 
   return (
-    <div className="workspace-module-stack">
-      <form className="panel studio-editor" onSubmit={handleSubmit}>
-        <div className="studio-compose-grid is-single">
-          <div className="studio-reference-card">
-            <div className="studio-reference-head">
-              <span className="studio-label">参考图</span>
-              {referenceImage ? (
-                <div className="studio-reference-actions">
-                  <button className="studio-mini-action" type="button" onClick={() => fileInputRef.current?.click()}>
-                    替换
-                  </button>
-                  <button className="studio-mini-action is-danger" type="button" onClick={handleRemoveReference}>
-                    移除
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <button className="studio-reference-box studio-reference-button" type="button" onClick={() => fileInputRef.current?.click()}>
-              {referenceImage ? <img src={referenceImage.previewUrl} alt={referenceImage.title} className="studio-reference-preview" /> : <span>+</span>}
-            </button>
-            <input ref={fileInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUpload} />
-            <p className="muted studio-file-name" title={referenceImage?.title}>
-              {referenceImage ? referenceImage.title : "点击上传"}
-            </p>
+    <div className="chat-studio-container">
+      {/* 历史记录区域 - 可滚动 */}
+      <div className="chat-history-area">
+        {assets.length > 0 || allJobs.length > 0 ? (
+          <div className="chat-messages">
+            {/* 显示所有任务和资源，按时间排序 */}
+            {[...allJobs.map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
+              ...assets.map(asset => ({ type: 'asset' as const, data: asset, time: asset.createdAt }))]
+              .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+              .map((item) => {
+                if (item.type === 'job') {
+                  const job = item.data;
+                  return (
+                    <div key={`job-${job.id}`} className="chat-message">
+                      <div className="chat-message-status">
+                        {job.status === 'processing' && <span className="status-badge processing">生成中</span>}
+                        {job.status === 'succeeded' && <span className="status-badge success">已完成</span>}
+                        {job.status === 'failed' && <span className="status-badge error">失败</span>}
+                        <span className="chat-time">{new Date(job.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="chat-message-content">
+                        {job.name && <div className="chat-job-name">{job.name}</div>}
+                        <div className="chat-job-message">{job.message}</div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  const asset = item.data;
+                  return (
+                    <div key={`asset-${asset.id}`} className="chat-message">
+                      <div className="chat-message-status">
+                        <span className="status-badge success">✓ 生成成功</span>
+                        <span className="chat-time">{new Date(asset.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="chat-result-card">
+                        <img src={asset.previewUrl} alt={asset.title} className="chat-result-image" />
+                        <div className="chat-result-info">
+                          <div className="chat-result-title">{asset.title}</div>
+                          <div className="chat-result-prompt">{asset.prompt}</div>
+                          {asset.originalUrl && (
+                            <a href={asset.originalUrl} target="_blank" rel="noreferrer" className="chat-result-link">
+                              查看原图 →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
           </div>
+        ) : (
+          <div className="chat-empty">
+            <p className="muted">暂无生成历史，开始创作吧！</p>
+          </div>
+        )}
+      </div>
 
-          <div className="field studio-prompt-card">
-            <textarea id="prompt" name="prompt" rows={6} placeholder="描述你想生成的图片..." required />
+      {/* 输入区域 - 固定在底部 */}
+      <form className="chat-input-area" onSubmit={handleSubmit}>
+        <div className="chat-input-wrapper">
+          {/* 参考图 */}
+          {referenceImage && (
+            <div className="chat-reference-preview">
+              <img src={referenceImage.previewUrl} alt={referenceImage.title} />
+              <button type="button" className="chat-reference-remove" onClick={handleRemoveReference}>×</button>
+            </div>
+          )}
 
-            <div style={{ marginBottom: '12px' }}>
-              <label className="studio-label" style={{ display: 'block', marginBottom: '8px' }}>图片模型</label>
-              <div className="studio-chip-group">
+          <div className="chat-input-controls">
+            {/* 工具栏 */}
+            <div className="chat-toolbar">
+              <button type="button" className="chat-tool-btn" onClick={() => fileInputRef.current?.click()} title="上传参考图">
+                📎
+              </button>
+              <input ref={fileInputRef} className="studio-hidden-input" type="file" accept="image/*" onChange={handleUpload} />
+
+              <div className="chat-model-select">
                 {imageModels.map((model) => (
                   <button
                     key={model.value}
@@ -174,15 +243,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                   </button>
                 ))}
               </div>
-              {selectedModel === "doubao-seedream-4-5-251128" && referenceImage && (
-                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--accent)' }}>
-                  ℹ️ Seedream 4.5 不支持图生图，将忽略参考图
-                </div>
-              )}
-            </div>
 
-            <div className="studio-controls-row">
-              <div className="studio-chip-group">
+              <div className="chat-ratio-select">
                 {aspectRatios.map((ratio) => (
                   <button
                     key={ratio}
@@ -194,55 +256,38 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                   </button>
                 ))}
               </div>
-              <button className="btn btn-primary studio-submit-btn" type="submit" disabled={isPending}>
-                {isPending ? "生成中..." : "生成图片"}
+            </div>
+
+            {/* 提示信息 */}
+            {selectedModel === "doubao-seedream-4-5-251128" && referenceImage && (
+              <div style={{ fontSize: '12px', color: 'var(--accent)', padding: '4px 0' }}>
+                ℹ️ Seedream 4.5 不支持图生图，将忽略参考图
+              </div>
+            )}
+
+            {/* 输入框和发送按钮 */}
+            <div className="chat-input-row">
+              <textarea
+                id="prompt"
+                name="prompt"
+                rows={3}
+                placeholder="描述你想生成的图片..."
+                required
+                className="chat-textarea"
+              />
+              <button className="chat-send-btn" type="submit" disabled={isPending}>
+                {isPending ? "⏳" : "→"}
               </button>
             </div>
           </div>
         </div>
 
         {(message || latestJob?.message) && (
-          <div className={`form-message ${message ? "success" : ""}`}>
+          <div className="chat-status-message">
             {message || latestJob.message}
           </div>
         )}
       </form>
-
-      <section className="panel studio-panel">
-        <div className="section-header">
-          <h3 className="section-title">生成历史</h3>
-          <a href="/assets" className="link-accent">
-            查看全部 →
-          </a>
-        </div>
-
-        {assets.length > 0 ? (
-          <div className="studio-result-grid-compact">
-            {assets.slice(0, 6).map((asset) => (
-              <div key={asset.id} className="result-card-compact">
-                <img className="result-preview" src={asset.previewUrl} alt={asset.title} />
-                <div className="result-card-overlay">
-                  {asset.originalUrl && (
-                    <a
-                      className="result-link-btn"
-                      href={asset.originalUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      查看
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="studio-empty-result">
-            <p className="muted">暂无生成结果</p>
-          </div>
-        )}
-      </section>
     </div>
   );
 }

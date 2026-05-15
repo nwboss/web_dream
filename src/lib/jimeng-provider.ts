@@ -22,12 +22,19 @@ type ImageGenerationInput = {
   referenceImageBase64?: string;
 };
 
+export type MultimodalReference = {
+  type: "image" | "video" | "audio";
+  base64: string;
+};
+
 type VideoGenerationInput = {
   prompt: string;
   referenceImageBase64?: string;
   referenceEndImageBase64?: string;
   duration?: number;
   aspectRatio?: string;
+  // Seedance 2.0 多模态参考
+  multimodalReferences?: MultimodalReference[];
 };
 
 function getEnv(name: string) {
@@ -697,43 +704,77 @@ async function generateJimengVideoGeneric(input: VideoGenerationInput): Promise<
   };
 }
 
-async function generateSeeddanceVideo(input: VideoGenerationInput): Promise<ProviderVideoResult> {
-  const { prompt, referenceImageBase64, referenceEndImageBase64, duration = 5, aspectRatio = "16:9" } = input;
+async function generateSeeddanceVideo(input: VideoGenerationInput, model: string): Promise<ProviderVideoResult> {
+  const { prompt, referenceImageBase64, referenceEndImageBase64, duration = 5, aspectRatio = "16:9", multimodalReferences } = input;
   const arkEndpoint = getEnv("ARK_ENDPOINT");
   const arkApiKey = getEnv("ARK_API_KEY");
 
   // 构建 content 数组
-  const content: Array<{ type: string; text?: string; image_url?: { url: string }; role?: string }> = [
+  const content: Array<{ type: string; text?: string; image_url?: { url: string }; video_url?: { url: string }; audio_url?: { url: string }; role?: string }> = [
     { type: "text", text: prompt }
   ];
 
-  // 添加首帧图片
-  if (referenceImageBase64) {
-    content.push({
-      type: "image_url",
-      image_url: { url: `data:image/jpeg;base64,${referenceImageBase64}` },
-      role: "first_frame"
-    });
+  // Seedance 2.0 支持多模态参考
+  if (model.includes("2-0") && multimodalReferences && multimodalReferences.length > 0) {
+    // 使用多模态参考文件
+    for (const ref of multimodalReferences) {
+      if (ref.type === "image") {
+        content.push({
+          type: "image_url",
+          image_url: { url: `data:image/jpeg;base64,${ref.base64}` },
+          role: "reference_image"
+        });
+      } else if (ref.type === "video") {
+        content.push({
+          type: "video_url",
+          video_url: { url: `data:video/mp4;base64,${ref.base64}` },
+          role: "reference_video"
+        });
+      } else if (ref.type === "audio") {
+        content.push({
+          type: "audio_url",
+          audio_url: { url: `data:audio/mpeg;base64,${ref.base64}` },
+          role: "reference_audio"
+        });
+      }
+    }
+  } else {
+    // Seedance 1.5 Pro 使用 first_frame/last_frame
+    // Seedance 2.0 兼容模式（如果没有multimodalReferences）使用 reference_image
+    const imageRole = model.includes("2-0") ? "reference_image" : "first_frame";
+    const lastFrameRole = model.includes("2-0") ? "reference_image" : "last_frame";
+
+    // 添加首帧图片
+    if (referenceImageBase64) {
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${referenceImageBase64}` },
+        role: imageRole
+      });
+    }
+
+    // 添加尾帧图片
+    if (referenceEndImageBase64) {
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${referenceEndImageBase64}` },
+        role: lastFrameRole
+      });
+    }
   }
 
-  // 添加尾帧图片
-  if (referenceEndImageBase64) {
-    content.push({
-      type: "image_url",
-      image_url: { url: `data:image/jpeg;base64,${referenceEndImageBase64}` },
-      role: "last_frame"
-    });
+  // 根据模型和是否有首尾帧来确定duration的有效性
+  // Seedance 1.5 Pro 首尾帧模式(flf2v)：duration必须是5秒
+  // Seedance 2.0：支持更长的时长（最多11秒）
+  let finalDuration = duration;
+  if (model.includes("1-5-pro")) {
+    const hasFirstAndLastFrame = referenceImageBase64 && referenceEndImageBase64;
+    finalDuration = hasFirstAndLastFrame ? 5 : duration;
   }
-
-  // 根据是否有首尾帧来确定duration的有效性
-  // 首尾帧模式(flf2v)：duration必须是5秒
-  // 首帧模式(i2v)或文生视频(t2v)：duration可以是1-10秒
-  const hasFirstAndLastFrame = referenceImageBase64 && referenceEndImageBase64;
-  const finalDuration = hasFirstAndLastFrame ? 5 : duration;
 
   // 提交任务 - 使用正确的火山方舟 Content Generation API 格式
   const submitBody = {
-    model: "doubao-seedance-1-5-pro-251215",
+    model,
     content,
     ratio: aspectRatio,
     duration: finalDuration,
@@ -854,7 +895,8 @@ export async function generateJimengVideo(
   referenceEndImageBase64?: string,
   duration?: number,
   aspectRatio?: string,
-  modelOverride?: string
+  modelOverride?: string,
+  multimodalReferences?: MultimodalReference[]
 ): Promise<ProviderVideoResult> {
   if (!isRealMode()) {
     return {
@@ -868,7 +910,8 @@ export async function generateJimengVideo(
     referenceImageBase64,
     referenceEndImageBase64,
     duration,
-    aspectRatio
+    aspectRatio,
+    multimodalReferences
   };
 
   // 优先使用前端传来的模型参数，其次使用环境变量
@@ -883,7 +926,7 @@ export async function generateJimengVideo(
         providerMessage: "Seeddance models require ARK_API_KEY and ARK_ENDPOINT to be configured."
       };
     }
-    return generateSeeddanceVideo(input);
+    return generateSeeddanceVideo(input, model);
   }
 
   // 老的即梦模型

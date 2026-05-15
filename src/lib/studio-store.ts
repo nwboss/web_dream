@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
 import { generateJimengImage, generateJimengVideo, isJimengRealImageEnabled, isJimengRealVideoEnabled } from "@/lib/jimeng-provider";
+import type { MultimodalReference } from "@/lib/jimeng-provider";
 import type { Asset, Job, JobKind, JobStatus, Shot } from "@/lib/project-store";
 
 type StudioMode = "image" | "video";
@@ -22,6 +23,15 @@ export type StudioReferenceImage = {
   storagePath: string;
 };
 
+export type StudioReferenceFile = {
+  id: string;
+  title: string;
+  type: "image" | "video" | "audio";
+  previewUrl: string;
+  createdAt: string;
+  storagePath: string;
+};
+
 type StudioStoreRecord = {
   imageJobs: Job[];
   imageAssets: Asset[];
@@ -29,6 +39,8 @@ type StudioStoreRecord = {
   videoAssets: Asset[];
   referenceImage: StudioReferenceImage | null;
   referenceEndImage: StudioReferenceImage | null;
+  // Seedance 2.0 多模态参考文件
+  referenceFiles: StudioReferenceFile[];
 };
 
 type StudioStore = Record<string, StudioStoreRecord>;
@@ -59,7 +71,8 @@ function emptyRecord(): StudioStoreRecord {
     videoJobs: [],
     videoAssets: [],
     referenceImage: null,
-    referenceEndImage: null
+    referenceEndImage: null,
+    referenceFiles: []
   };
 }
 
@@ -217,7 +230,8 @@ export async function getStudioState(ownerEmail: string) {
     videoJobs: record.videoJobs.map(cloneJob),
     videoAssets: record.videoAssets.map(cloneAsset),
     referenceImage: cloneReferenceImage(record.referenceImage),
-    referenceEndImage: cloneReferenceImage(record.referenceEndImage)
+    referenceEndImage: cloneReferenceImage(record.referenceEndImage),
+    referenceFiles: record.referenceFiles?.map(f => ({ ...f })) || []
   };
 }
 
@@ -371,10 +385,39 @@ async function processVideoGenerationInBackground(
   duration?: number,
   referenceImageBase64?: string,
   referenceEndImageBase64?: string,
-  model?: string
+  model?: string,
+  useMultimodal?: boolean
 ) {
   try {
-    const providerResult = await generateJimengVideo(prompt, referenceImageBase64, referenceEndImageBase64, duration, aspectRatio, model);
+    // 如果使用多模态模式，读取referenceFiles
+    let multimodalReferences: Array<{ type: "image" | "video" | "audio"; base64: string }> | undefined;
+    if (useMultimodal && model?.includes("2-0")) {
+      const store = await ensureStore();
+      const record = ensureUserRecord(store, ownerEmail);
+
+      multimodalReferences = [];
+      for (const file of record.referenceFiles || []) {
+        try {
+          const fileBuffer = await readFile(path.join(assetsDir, file.storagePath));
+          multimodalReferences.push({
+            type: file.type,
+            base64: fileBuffer.toString("base64")
+          });
+        } catch (error) {
+          console.error(`[Video Generation] Failed to read file ${file.storagePath}:`, error);
+        }
+      }
+    }
+
+    const providerResult = await generateJimengVideo(
+      prompt,
+      referenceImageBase64,
+      referenceEndImageBase64,
+      duration,
+      aspectRatio,
+      model,
+      multimodalReferences
+    );
 
     const store = await ensureStore();
     const record = ensureUserRecord(store, ownerEmail);
@@ -502,6 +545,9 @@ export async function generateStandaloneVideo(
   record.videoJobs = [job, ...record.videoJobs].slice(0, 12);
   await saveStore(store);
 
+  // 判断是否使用多模态模式（Seedance 2.0 + 有referenceFiles）
+  const useMultimodal = model === "doubao-seedance-2-0-260128" && record.referenceFiles && record.referenceFiles.length > 0;
+
   // 异步执行，不等待结果
   setImmediate(() => {
     processVideoGenerationInBackground(
@@ -512,7 +558,8 @@ export async function generateStandaloneVideo(
       duration,
       referenceImageBase64,
       referenceEndImageBase64,
-      model
+      model,
+      useMultimodal
     ).catch((error) => {
       console.error("[Video Generation] Background process error:", error);
     });
