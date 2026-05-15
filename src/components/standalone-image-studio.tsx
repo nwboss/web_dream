@@ -65,7 +65,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
     const prompt = payload.prompt as string;
 
@@ -103,6 +104,9 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
       }
 
       setMessage(data.message || "图片生成任务已提交，正在后台处理...");
+      // 清空表单输入框
+      form.reset();
+      // 刷新页面数据
       router.refresh();
     });
   }

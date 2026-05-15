@@ -612,6 +612,24 @@ export async function getStudioAsset(ownerEmail: string, assetId: string) {
     };
   }
 
+  // 查找多模态参考文件
+  const referenceFile = record.referenceFiles?.find((file) => file.id === assetId);
+  if (referenceFile?.storagePath) {
+    return {
+      asset: {
+        id: referenceFile.id,
+        kind: referenceFile.type === "video" ? "video" : "image" as const,
+        title: referenceFile.title,
+        prompt: "",
+        previewUrl: referenceFile.previewUrl,
+        createdAt: referenceFile.createdAt,
+        source: "mock" as const,
+        storagePath: referenceFile.storagePath
+      },
+      absolutePath: path.join(assetsDir, referenceFile.storagePath)
+    };
+  }
+
   return null;
 }
 

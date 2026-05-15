@@ -32,6 +32,18 @@ function getContentTypeFromPath(filePath: string) {
     return "image/gif";
   }
 
+  if (filePath.endsWith(".mp3")) {
+    return "audio/mpeg";
+  }
+
+  if (filePath.endsWith(".wav")) {
+    return "audio/wav";
+  }
+
+  if (filePath.endsWith(".ogg")) {
+    return "audio/ogg";
+  }
+
   return "image/jpeg";
 }
 
