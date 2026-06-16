@@ -7,6 +7,44 @@ import type { Asset, Job, JobKind, JobStatus, Shot } from "@/lib/project-store";
 
 type StudioMode = "image" | "video";
 
+export type ReferenceImageSnapshot = {
+  id: string;
+  title: string;
+  previewUrl: string;
+  storagePath: string;
+};
+
+export type ReferenceFileSnapshot = {
+  id: string;
+  title: string;
+  type: "image" | "video" | "audio";
+  previewUrl: string;
+  storagePath: string;
+};
+
+export type ImageGenerationContext = {
+  kind: "image";
+  prompt: string;
+  aspectRatio: Shot["aspectRatio"];
+  model?: string;
+  referenceImage?: ReferenceImageSnapshot;
+};
+
+export type VideoGenerationContext = {
+  kind: "video";
+  prompt: string;
+  aspectRatio?: string;
+  duration?: number;
+  model?: string;
+  referenceImage?: ReferenceImageSnapshot;
+  referenceEndImage?: ReferenceImageSnapshot;
+  selectedStartImageId?: string | null;
+  selectedEndImageId?: string | null;
+  referenceFiles?: ReferenceFileSnapshot[];
+};
+
+export type GenerationContext = ImageGenerationContext | VideoGenerationContext;
+
 type StudioImageDraft = {
   prompt: string;
   aspectRatio: Shot["aspectRatio"];
@@ -41,6 +79,15 @@ type StudioStoreRecord = {
   referenceEndImage: StudioReferenceImage | null;
   // Seedance 2.0 多模态参考文件
   referenceFiles: StudioReferenceFile[];
+  pendingRestore?: {
+    kind: JobKind;
+    prompt: string;
+    aspectRatio?: string;
+    duration?: number;
+    model?: string;
+    selectedStartImageId?: string | null;
+    selectedEndImageId?: string | null;
+  };
 };
 
 type StudioStore = Record<string, StudioStoreRecord>;

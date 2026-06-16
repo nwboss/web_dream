@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
 import { generateJimengImage, isJimengRealImageEnabled } from "@/lib/jimeng-provider";
+import type { GenerationContext } from "@/lib/studio-store";
 
 export type ShotStatus = "draft" | "ready" | "generating" | "done";
 
@@ -40,6 +41,7 @@ export type Asset = {
   source: "mock" | "jimeng";
   storagePath?: string;
   originalUrl?: string;
+  generationContext?: GenerationContext;
 };
 
 export type Scene = {
