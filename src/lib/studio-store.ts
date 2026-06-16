@@ -135,7 +135,7 @@ function cloneReferenceImage(referenceImage: StudioReferenceImage | null) {
   return referenceImage ? { ...referenceImage } : null;
 }
 
-async function ensureStore() {
+export async function ensureStore() {
   await mkdir(dataDir, { recursive: true });
 
   try {
@@ -148,7 +148,7 @@ async function ensureStore() {
   }
 }
 
-async function saveStore(store: StudioStore) {
+export async function saveStore(store: StudioStore) {
   await writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
 }
 
