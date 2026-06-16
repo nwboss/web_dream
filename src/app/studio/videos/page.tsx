@@ -1,13 +1,14 @@
 import { StandaloneVideoStudio } from "@/components/standalone-video-studio-fresh";
 import { StudioLayout } from "@/components/studio-layout";
 import { requireSession } from "@/lib/session";
-import { getStudioState } from "@/lib/studio-store";
+import { getStudioState, takePendingRestore } from "@/lib/studio-store";
 
 export const dynamic = "force-dynamic";
 
 export default async function VideoStudioPage() {
   const session = await requireSession();
   const state = await getStudioState(session.email);
+  const pendingRestore = await takePendingRestore(session.email);
 
   return (
     <StudioLayout>
@@ -23,6 +24,7 @@ export default async function VideoStudioPage() {
           referenceEndImage={state.referenceEndImage}
           imageAssets={state.imageAssets}
           referenceFiles={state.referenceFiles}
+          pendingRestore={pendingRestore || undefined}
         />
       </div>
     </StudioLayout>
