@@ -216,6 +216,29 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     router.refresh();
   };
 
+  function handleRestoreFromHistory(assetId: string) {
+    startTransition(async () => {
+      setMessage("");
+      const response = await fetch("/api/history/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId })
+      });
+      const data = (await response.json()) as { ok: boolean; message?: string; missingReferences?: boolean };
+
+      if (!response.ok || !data.ok) {
+        setMessage(data.message || "恢复失败");
+        return;
+      }
+
+      if (data.missingReferences) {
+        setMessage("部分历史参考资源已失效，请重新上传");
+      }
+
+      router.refresh();
+    });
+  }
+
   // Input area drag handlers
   const handleInputDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -375,6 +398,15 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                           <div className="chat-result-title">{asset.title}</div>
                           <div className="chat-result-prompt">{asset.prompt}</div>
                           {asset.durationSec && <div className="chat-result-meta">时长: {asset.durationSec}s</div>}
+                          <button
+                            type="button"
+                            className="chat-result-link"
+                            onClick={() => handleRestoreFromHistory(asset.id)}
+                            disabled={isPending}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", marginTop: "6px" }}
+                          >
+                            修改重跑 →
+                          </button>
                         </div>
                       </div>
                     </div>
