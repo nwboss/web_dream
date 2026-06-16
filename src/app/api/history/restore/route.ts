@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { ensureStore, saveStore } from "@/lib/studio-store";
 import { requireSession } from "@/lib/session";
-import type { JobKind } from "@/lib/project-store";
+import type { JobKind, Shot } from "@/lib/project-store";
 import type { GenerationContext } from "@/lib/studio-store";
 
 const assetsDir = path.join(process.cwd(), "data", "assets");
@@ -12,7 +12,7 @@ const assetsDir = path.join(process.cwd(), "data", "assets");
 type PendingRestore = {
   kind: JobKind;
   prompt: string;
-  aspectRatio?: string;
+  aspectRatio?: Shot["aspectRatio"];
   duration?: number;
   model?: string;
   selectedStartImageId?: string | null;
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   const pendingRestore: PendingRestore = {
     kind,
     prompt: asset.prompt,
-    aspectRatio: context?.aspectRatio,
+    aspectRatio: context?.aspectRatio as Shot["aspectRatio"] | undefined,
     duration: context?.kind === "video" ? context.duration : undefined,
     model: context?.model
   };

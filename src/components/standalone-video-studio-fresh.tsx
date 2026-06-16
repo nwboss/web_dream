@@ -13,6 +13,11 @@ type StandaloneVideoStudioProps = {
   referenceEndImage: StudioReferenceImage | null;
   imageAssets: Asset[];
   referenceFiles: StudioReferenceFile[];
+  pendingRestore?: {
+    prompt: string;
+    aspectRatio?: "9:16" | "16:9" | "1:1";
+    model?: string;
+  };
 };
 
 const aspectRatios = ["16:9", "9:16", "1:1"] as const;

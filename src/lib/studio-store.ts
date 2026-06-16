@@ -82,7 +82,7 @@ type StudioStoreRecord = {
   pendingRestore?: {
     kind: JobKind;
     prompt: string;
-    aspectRatio?: string;
+    aspectRatio?: Shot["aspectRatio"];
     duration?: number;
     model?: string;
     selectedStartImageId?: string | null;

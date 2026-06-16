@@ -10,6 +10,11 @@ type StandaloneImageStudioProps = {
   assets: Asset[];
   jobs: Job[];
   referenceImage: StudioReferenceImage | null;
+  pendingRestore?: {
+    prompt: string;
+    aspectRatio?: Shot["aspectRatio"];
+    model?: string;
+  };
 };
 
 const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
@@ -18,12 +23,21 @@ const imageModels = [
   { value: "doubao-seedream-4-5-251128", label: "Seedream 4.5", description: "高质量图片生成" }
 ] as const;
 
-export function StandaloneImageStudio({ assets, jobs, referenceImage }: StandaloneImageStudioProps) {
+export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRestore }: StandaloneImageStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>("9:16");
-  const [selectedModel, setSelectedModel] = useState<typeof imageModels[number]["value"]>("jimeng-3.1");
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<Shot["aspectRatio"]>(
+    (aspectRatios as string[]).includes(pendingRestore?.aspectRatio || "")
+      ? (pendingRestore?.aspectRatio as Shot["aspectRatio"])
+      : "9:16"
+  );
+  const [selectedModel, setSelectedModel] = useState<typeof imageModels[number]["value"]>(
+    imageModels.some(m => m.value === pendingRestore?.model)
+      ? (pendingRestore?.model as typeof imageModels[number]["value"])
+      : "jimeng-3.1"
+  );
+  const [restoredPrompt, setRestoredPrompt] = useState(pendingRestore?.prompt || "");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -62,6 +76,19 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
       setPendingJobs(prev => prev.filter(pj => !jobs.some(j => j.id === pj.id)));
     }
   }, [jobs, pendingJobs.length]);
+
+  useEffect(() => {
+    if (pendingRestore) {
+      setRestoredPrompt(pendingRestore.prompt);
+      if ((aspectRatios as string[]).includes(pendingRestore.aspectRatio || "")) {
+        setSelectedAspectRatio(pendingRestore.aspectRatio as Shot["aspectRatio"]);
+      }
+      if (imageModels.some(m => m.value === pendingRestore.model)) {
+        setSelectedModel(pendingRestore.model as typeof imageModels[number]["value"]);
+      }
+      setMessage("已加载历史生成上下文，可直接修改后提交");
+    }
+  }, [pendingRestore]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,8 +131,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
       }
 
       setMessage(data.message || "图片生成任务已提交，正在后台处理...");
-      // 清空表单输入框
-      form.reset();
+      setRestoredPrompt("");
       // 刷新页面数据
       router.refresh();
     });
@@ -223,6 +249,9 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
             <div className="chat-reference-preview">
               <img src={referenceImage.previewUrl} alt={referenceImage.title} />
               <button type="button" className="chat-reference-remove" onClick={handleRemoveReference}>×</button>
+              <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                {referenceImage.title}
+              </span>
             </div>
           )}
 
@@ -278,6 +307,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage }: Standalo
                 placeholder="描述你想生成的图片..."
                 required
                 className="chat-textarea"
+                value={restoredPrompt}
+                onChange={(e) => setRestoredPrompt(e.target.value)}
               />
               <button className="chat-send-btn" type="submit" disabled={isPending}>
                 {isPending ? "⏳" : "→"}
