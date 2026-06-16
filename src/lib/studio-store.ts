@@ -466,7 +466,9 @@ async function processVideoGenerationInBackground(
   referenceEndImageBase64?: string,
   model?: string,
   useMultimodal?: boolean,
-  referencedFileIds?: string[]
+  referencedFileIds?: string[],
+  selectedStartImageId?: string | null,
+  selectedEndImageId?: string | null
 ) {
   try {
     // 如果使用多模态模式，读取referenceFiles
@@ -523,6 +525,7 @@ async function processVideoGenerationInBackground(
 
     const assetId = createId("asset");
     const storagePath = await downloadVideoToLocal(assetId, providerResult.videoUrl);
+
     const asset: Asset = {
       id: assetId,
       kind: "video",
@@ -533,7 +536,39 @@ async function processVideoGenerationInBackground(
       source: "jimeng",
       storagePath,
       originalUrl: providerResult.videoUrl,
-      durationSec: duration || 5
+      durationSec: duration || 5,
+      generationContext: {
+        kind: "video",
+        prompt,
+        aspectRatio,
+        duration,
+        model,
+        referenceImage: record.referenceImage
+          ? {
+              id: record.referenceImage.id,
+              title: record.referenceImage.title,
+              previewUrl: record.referenceImage.previewUrl,
+              storagePath: record.referenceImage.storagePath
+            }
+          : undefined,
+        referenceEndImage: record.referenceEndImage
+          ? {
+              id: record.referenceEndImage.id,
+              title: record.referenceEndImage.title,
+              previewUrl: record.referenceEndImage.previewUrl,
+              storagePath: record.referenceEndImage.storagePath
+            }
+          : undefined,
+        selectedStartImageId,
+        selectedEndImageId,
+        referenceFiles: record.referenceFiles?.map(f => ({
+          id: f.id,
+          title: f.title,
+          type: f.type,
+          previewUrl: f.previewUrl,
+          storagePath: f.storagePath
+        }))
+      }
     };
 
     job.status = "succeeded";
@@ -612,7 +647,39 @@ export async function generateStandaloneVideo(
       previewUrl: createMockPreview("video", "独立视频片段", "#22c55e"),
       createdAt,
       durationSec: 5,
-      source: "mock"
+      source: "mock",
+      generationContext: {
+        kind: "video",
+        prompt,
+        aspectRatio,
+        duration,
+        model,
+        referenceImage: record.referenceImage
+          ? {
+              id: record.referenceImage.id,
+              title: record.referenceImage.title,
+              previewUrl: record.referenceImage.previewUrl,
+              storagePath: record.referenceImage.storagePath
+            }
+          : undefined,
+        referenceEndImage: record.referenceEndImage
+          ? {
+              id: record.referenceEndImage.id,
+              title: record.referenceEndImage.title,
+              previewUrl: record.referenceEndImage.previewUrl,
+              storagePath: record.referenceEndImage.storagePath
+            }
+          : undefined,
+        selectedStartImageId,
+        selectedEndImageId,
+        referenceFiles: record.referenceFiles?.map(f => ({
+          id: f.id,
+          title: f.title,
+          type: f.type,
+          previewUrl: f.previewUrl,
+          storagePath: f.storagePath
+        }))
+      }
     };
 
     record.videoJobs = [job, ...record.videoJobs].slice(0, 12);
@@ -647,7 +714,9 @@ export async function generateStandaloneVideo(
       referenceEndImageBase64,
       model,
       useMultimodal,
-      referencedFileIds
+      referencedFileIds,
+      selectedStartImageId,
+      selectedEndImageId
     ).catch((error) => {
       console.error("[Video Generation] Background process error:", error);
     });
