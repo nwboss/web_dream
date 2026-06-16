@@ -298,8 +298,8 @@ async function processImageGenerationInBackground(
       draft.model
     );
 
-    const store = await ensureStore();
-    const record = ensureUserRecord(store, ownerEmail);
+    let store = await ensureStore();
+    let record = ensureUserRecord(store, ownerEmail);
     const job = record.imageJobs.find((j) => j.id === jobId);
 
     if (!job) {
@@ -316,6 +316,10 @@ async function processImageGenerationInBackground(
 
     const assetId = createId("asset");
     const storagePath = await downloadImageToLocal(assetId, providerResult.imageUrl);
+
+    store = await ensureStore();
+    record = ensureUserRecord(store, ownerEmail);
+
     const asset: Asset = {
       id: assetId,
       kind: "image",
@@ -325,7 +329,21 @@ async function processImageGenerationInBackground(
       createdAt: now(),
       source: "jimeng",
       storagePath,
-      originalUrl: providerResult.imageUrl
+      originalUrl: providerResult.imageUrl,
+      generationContext: {
+        kind: "image",
+        prompt: promptText,
+        aspectRatio: draft.aspectRatio,
+        model: draft.model,
+        referenceImage: record.referenceImage
+          ? {
+              id: record.referenceImage.id,
+              title: record.referenceImage.title,
+              previewUrl: record.referenceImage.previewUrl,
+              storagePath: record.referenceImage.storagePath
+            }
+          : undefined
+      }
     };
 
     job.status = "succeeded";
@@ -372,7 +390,21 @@ export async function generateStandaloneImage(ownerEmail: string, draft: StudioI
       prompt: promptText,
       previewUrl: createMockPreview("image", draft.title?.trim() || "独立图片结果", "#f97316"),
       createdAt,
-      source: "mock"
+      source: "mock",
+      generationContext: {
+        kind: "image",
+        prompt: promptText,
+        aspectRatio: draft.aspectRatio,
+        model: draft.model,
+        referenceImage: record.referenceImage
+          ? {
+              id: record.referenceImage.id,
+              title: record.referenceImage.title,
+              previewUrl: record.referenceImage.previewUrl,
+              storagePath: record.referenceImage.storagePath
+            }
+          : undefined
+      }
     };
 
     record.imageJobs = [job, ...record.imageJobs].slice(0, 12);
