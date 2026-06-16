@@ -16,6 +16,7 @@ type StandaloneVideoStudioProps = {
   pendingRestore?: {
     prompt: string;
     aspectRatio?: "9:16" | "16:9" | "1:1";
+    duration?: number;
     model?: string;
   };
 };
@@ -27,13 +28,24 @@ const videoModels = [
   { value: "jimeng-video-2.0", label: "即梦视频 2.0", description: "仅支持首帧" }
 ] as const;
 
-export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage, imageAssets, referenceFiles }: StandaloneVideoStudioProps) {
+export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage, imageAssets, referenceFiles, pendingRestore }: StandaloneVideoStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<typeof aspectRatios[number]>("16:9");
-  const [selectedDuration, setSelectedDuration] = useState<number>(5);
-  const [selectedModel, setSelectedModel] = useState<typeof videoModels[number]["value"]>("doubao-seedance-1-5-pro-251215");
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<typeof aspectRatios[number]>(
+    (aspectRatios as readonly string[]).includes(pendingRestore?.aspectRatio || "")
+      ? (pendingRestore?.aspectRatio as typeof aspectRatios[number])
+      : "16:9"
+  );
+  const [selectedDuration, setSelectedDuration] = useState<number>(
+    pendingRestore?.duration && pendingRestore.duration >= 1 ? pendingRestore.duration : 5
+  );
+  const [selectedModel, setSelectedModel] = useState<typeof videoModels[number]["value"]>(
+    videoModels.some(m => m.value === pendingRestore?.model)
+      ? (pendingRestore?.model as typeof videoModels[number]["value"])
+      : "doubao-seedance-1-5-pro-251215"
+  );
+  const [restoredPrompt, setRestoredPrompt] = useState(pendingRestore?.prompt || "");
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [isDraggingStart, setIsDraggingStart] = useState(false);
   const [isDraggingEnd, setIsDraggingEnd] = useState(false);
@@ -41,6 +53,12 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   const [isDraggingInput, setIsDraggingInput] = useState(false);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
+  const [orderedReferenceFiles, setOrderedReferenceFiles] = useState(referenceFiles);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setOrderedReferenceFiles(referenceFiles);
+  }, [referenceFiles]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileEndInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,6 +79,22 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       setPendingJobs(prev => prev.filter(pj => !jobs.some(j => j.id === pj.id)));
     }
   }, [jobs, pendingJobs.length]);
+
+  useEffect(() => {
+    if (pendingRestore) {
+      setRestoredPrompt(pendingRestore.prompt);
+      if ((aspectRatios as readonly string[]).includes(pendingRestore.aspectRatio || "")) {
+        setSelectedAspectRatio(pendingRestore.aspectRatio as typeof aspectRatios[number]);
+      }
+      if (pendingRestore.duration && pendingRestore.duration >= 1) {
+        setSelectedDuration(pendingRestore.duration);
+      }
+      if (videoModels.some(m => m.value === pendingRestore.model)) {
+        setSelectedModel(pendingRestore.model as typeof videoModels[number]["value"]);
+      }
+      setMessage("已加载历史生成上下文，可直接修改后提交");
+    }
+  }, [pendingRestore]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,7 +146,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       }
 
       setMessage(data.message || "视频生成中...");
-      form.reset();
+      setRestoredPrompt("");
       router.refresh();
     });
   }
@@ -253,15 +287,18 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     if (lastAtIndex === -1) return;
 
     const newValue = textBeforeCursor.substring(0, lastAtIndex) + `@${title} ` + value.substring(cursorPos);
-    textarea.value = newValue;
+    setRestoredPrompt(newValue);
     const newCursorPos = lastAtIndex + title.length + 2;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-    setShowMentionMenu(false);
 
-    // 触发一个input事件，以便React知道值已改变
-    const event = new Event('input', { bubbles: true });
-    textarea.dispatchEvent(event);
-    textarea.focus();
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.value = newValue;
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current.focus();
+      }
+    }, 0);
+
+    setShowMentionMenu(false);
   };
 
   const getMentionableFiles = () => {
@@ -408,6 +445,9 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
               <div className="chat-reference-preview">
                 <img src={referenceImage.previewUrl} alt="首帧" />
                 <span className="chat-reference-label">首帧</span>
+                <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                  {referenceImage.title}
+                </span>
                 <button type="button" className="chat-reference-remove" onClick={() => {
                   fetch("/api/studio/reference", { method: "DELETE" }).then(() => router.refresh());
                 }}>×</button>
@@ -417,13 +457,43 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
               <div className="chat-reference-preview">
                 <img src={referenceEndImage.previewUrl} alt="尾帧" />
                 <span className="chat-reference-label">尾帧</span>
+                <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                  {referenceEndImage.title}
+                </span>
                 <button type="button" className="chat-reference-remove" onClick={() => {
                   fetch("/api/studio/reference-end", { method: "DELETE" }).then(() => router.refresh());
                 }}>×</button>
               </div>
             )}
-            {referenceFiles.map((file) => (
-              <div key={file.id} className="chat-reference-preview">
+            {orderedReferenceFiles.map((file, index) => (
+              <div
+                key={file.id}
+                className="chat-reference-preview"
+                draggable
+                onDragStart={() => setDraggingIndex(index)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggingIndex === null || draggingIndex === index) return;
+                  const newOrder = [...orderedReferenceFiles];
+                  const [moved] = newOrder.splice(draggingIndex, 1);
+                  newOrder.splice(index, 0, moved);
+                  setOrderedReferenceFiles(newOrder);
+                  setDraggingIndex(null);
+                  fetch("/api/studio/reference-files", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderedIds: newOrder.map(f => f.id) })
+                  }).then(() => router.refresh()).catch(console.error);
+                }}
+                style={{
+                  position: "relative",
+                  cursor: "move",
+                  opacity: draggingIndex === index ? 0.5 : 1
+                }}
+              >
                 {file.type === 'image' && <img src={file.previewUrl} alt={file.title} />}
                 {file.type === 'video' && <video src={file.previewUrl} />}
                 {file.type === 'audio' && <div className="audio-preview">🎵</div>}
@@ -431,6 +501,9 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                 <button type="button" className="chat-reference-remove" onClick={() => {
                   fetch(`/api/studio/reference-files?id=${file.id}`, { method: 'DELETE' }).then(() => router.refresh());
                 }}>×</button>
+                <div style={{ padding: "4px 6px", fontSize: "11px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {file.title}
+                </div>
               </div>
             ))}
           </div>
@@ -534,6 +607,8 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                 placeholder="描述你想生成的视频... 输入 @ 可引用已上传的文件"
                 required
                 className="chat-textarea"
+                value={restoredPrompt}
+                onChange={(e) => setRestoredPrompt(e.target.value)}
                 onInput={handleTextareaInput}
                 onKeyDown={(e) => {
                   if (showMentionMenu && e.key === 'Escape') {
