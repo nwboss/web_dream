@@ -149,6 +149,29 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, referenceFile });
 }
 
+export async function PATCH(request: Request) {
+  const session = await requireSession();
+  const { orderedIds } = (await request.json()) as { orderedIds?: string[] };
+
+  if (!Array.isArray(orderedIds)) {
+    return NextResponse.json({ ok: false, message: "orderedIds 必须是数组" }, { status: 400 });
+  }
+
+  const store = await ensureStore();
+  const record = ensureUserRecord(store, session.email);
+
+  const idSet = new Set(orderedIds);
+  const orderedFiles = orderedIds
+    .map(id => record.referenceFiles.find(f => f.id === id))
+    .filter((f): f is StudioReferenceFile => Boolean(f));
+  const remainingFiles = record.referenceFiles.filter(f => !idSet.has(f.id));
+
+  record.referenceFiles = [...orderedFiles, ...remainingFiles];
+  await saveStore(store);
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(request: Request) {
   const session = await requireSession();
   const { searchParams } = new URL(request.url);
