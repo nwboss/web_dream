@@ -845,3 +845,16 @@ export async function clearReferenceEndImage(ownerEmail: string) {
   record.referenceEndImage = null;
   await saveStore(store);
 }
+
+export async function takePendingRestore(ownerEmail: string) {
+  const store = await ensureStore();
+  const record = ensureUserRecord(store, ownerEmail);
+  const pending = record.pendingRestore;
+
+  if (pending) {
+    record.pendingRestore = undefined;
+    await saveStore(store);
+  }
+
+  return pending || null;
+}
