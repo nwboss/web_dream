@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { HistoryAssetCard } from "@/components/history-asset-card";
 import { requireSession } from "@/lib/session";
 import { getStudioState } from "@/lib/studio-store";
 
@@ -47,7 +48,7 @@ export default async function HistoryPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: "24px" }}>
+      <div style={{ display: "grid", gap: "16px" }}>
         {/* 进行中的任务 */}
         {processingJobs.length > 0 && (
           <section className="panel">
@@ -60,13 +61,13 @@ export default async function HistoryPage() {
                   key={job.id}
                   className="history-job-card"
                   style={{
-                    padding: "16px 20px",
+                    padding: "12px 16px",
                     borderRadius: "16px",
                     background: "rgba(255, 209, 102, 0.08)",
                     border: "1px solid rgba(255, 209, 102, 0.2)"
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ fontSize: "24px" }}>
                       {job.type === "image" ? "🎨" : "🎬"}
                     </div>
@@ -104,57 +105,7 @@ export default async function HistoryPage() {
           {allAssets.length > 0 ? (
             <div className="studio-result-grid">
               {allAssets.map((asset) => (
-                <div
-                  key={asset.id}
-                  className="result-card"
-                  style={{
-                    padding: "10px",
-                    borderRadius: "16px",
-                    border: "1px solid var(--line)",
-                    background: "rgba(255, 255, 255, 0.03)"
-                  }}
-                >
-                  {asset.kind === "video" ? (
-                    <video
-                      className="result-preview"
-                      src={asset.previewUrl}
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1 / 1",
-                        objectFit: "cover",
-                        borderRadius: "12px"
-                      }}
-                    />
-                  ) : (
-                    <img
-                      className="result-preview"
-                      src={asset.previewUrl}
-                      alt={asset.title}
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1 / 1",
-                        objectFit: "cover",
-                        borderRadius: "12px"
-                      }}
-                    />
-                  )}
-                  <div style={{ marginTop: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                      <span style={{ fontSize: "16px" }}>
-                        {asset.kind === "video" ? "🎬" : "🎨"}
-                      </span>
-                      <strong style={{ fontSize: "14px" }}>{asset.title}</strong>
-                    </div>
-                    <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-                      {new Date(asset.createdAt).toLocaleString("zh-CN", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </p>
-                  </div>
-                </div>
+                <HistoryAssetCard key={asset.id} asset={asset} />
               ))}
             </div>
           ) : (
@@ -184,13 +135,13 @@ export default async function HistoryPage() {
                   key={job.id}
                   className="history-job-card"
                   style={{
-                    padding: "16px 20px",
+                    padding: "12px 16px",
                     borderRadius: "16px",
                     background: "rgba(255, 154, 169, 0.06)",
                     border: "1px solid rgba(255, 154, 169, 0.15)"
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ fontSize: "24px" }}>
                       {job.type === "image" ? "🎨" : "🎬"}
                     </div>
@@ -232,13 +183,13 @@ export default async function HistoryPage() {
                   key={job.id}
                   className="history-job-card"
                   style={{
-                    padding: "16px 20px",
+                    padding: "12px 16px",
                     borderRadius: "16px",
                     background: "rgba(163, 230, 53, 0.06)",
                     border: "1px solid rgba(163, 230, 53, 0.15)"
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ fontSize: "24px" }}>
                       {job.type === "image" ? "🎨" : "🎬"}
                     </div>
