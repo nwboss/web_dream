@@ -5,8 +5,14 @@ import { getStudioState, takePendingRestore } from "@/lib/studio-store";
 
 export const dynamic = "force-dynamic";
 
-export default async function ImageStudioPage() {
+export default async function ImageStudioPage({
+  searchParams
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await requireSession();
+  const params = await searchParams;
+  const missingReferences = params.missingReferences === "1";
   const state = await getStudioState(session.email);
   const pendingRestore = await takePendingRestore(session.email);
 
@@ -22,6 +28,7 @@ export default async function ImageStudioPage() {
           jobs={state.imageJobs}
           referenceImage={state.referenceImage}
           pendingRestore={pendingRestore || undefined}
+          missingReferences={missingReferences}
         />
       </div>
     </StudioLayout>

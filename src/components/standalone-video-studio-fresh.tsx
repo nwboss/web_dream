@@ -19,6 +19,7 @@ type StandaloneVideoStudioProps = {
     duration?: number;
     model?: string;
   };
+  missingReferences?: boolean;
 };
 
 const aspectRatios = ["16:9", "9:16", "1:1"] as const;
@@ -28,7 +29,7 @@ const videoModels = [
   { value: "jimeng-video-2.0", label: "即梦视频 2.0", description: "仅支持首帧" }
 ] as const;
 
-export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage, imageAssets, referenceFiles, pendingRestore }: StandaloneVideoStudioProps) {
+export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceEndImage, imageAssets, referenceFiles, pendingRestore, missingReferences }: StandaloneVideoStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
@@ -95,6 +96,12 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       setMessage("已加载历史生成上下文，可直接修改后提交");
     }
   }, [pendingRestore]);
+
+  useEffect(() => {
+    if (missingReferences) {
+      setMessage("部分历史参考资源已失效，请重新上传");
+    }
+  }, [missingReferences]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

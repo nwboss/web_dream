@@ -15,6 +15,7 @@ type StandaloneImageStudioProps = {
     aspectRatio?: Shot["aspectRatio"];
     model?: string;
   };
+  missingReferences?: boolean;
 };
 
 const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
@@ -23,7 +24,7 @@ const imageModels = [
   { value: "doubao-seedream-4-5-251128", label: "Seedream 4.5", description: "高质量图片生成" }
 ] as const;
 
-export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRestore }: StandaloneImageStudioProps) {
+export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRestore, missingReferences }: StandaloneImageStudioProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
@@ -89,6 +90,12 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
       setMessage("已加载历史生成上下文，可直接修改后提交");
     }
   }, [pendingRestore]);
+
+  useEffect(() => {
+    if (missingReferences) {
+      setMessage("部分历史参考资源已失效，请重新上传");
+    }
+  }, [missingReferences]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
