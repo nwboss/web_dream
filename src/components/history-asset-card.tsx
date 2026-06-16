@@ -29,12 +29,13 @@ export function HistoryAssetCard({ asset }: HistoryAssetCardProps) {
         return;
       }
 
-      const target = data.kind === "image" ? "/studio/images" : "/studio/videos";
       if (data.missingReferences) {
-        const separator = target.includes("?") ? "&" : "?";
-        router.push(`${target}${separator}missingReferences=1`);
+        const url = data.kind === "image"
+          ? "/studio/images?missingReferences=1"
+          : "/studio/videos?missingReferences=1";
+        router.push(url);
       } else {
-        router.push(target);
+        router.push(data.kind === "image" ? "/studio/images" : "/studio/videos");
       }
     });
   }
