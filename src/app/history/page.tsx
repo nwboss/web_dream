@@ -23,7 +23,6 @@ export default async function HistoryPage() {
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const processingJobs = allJobs.filter((job) => job.status === "processing");
-  const completedJobs = allJobs.filter((job) => job.status === "succeeded");
   const failedJobs = allJobs.filter((job) => job.status === "failed");
 
   return (
@@ -171,53 +170,6 @@ export default async function HistoryPage() {
           </section>
         )}
 
-        {/* 已完成的任务（只显示job记录，不显示资源） */}
-        {completedJobs.length > 0 && (
-          <details className="panel" style={{ cursor: "pointer" }}>
-            <summary style={{ fontWeight: 600, fontSize: "20px", marginBottom: "20px" }}>
-              已完成任务 ({completedJobs.length})
-            </summary>
-            <div style={{ display: "grid", gap: "12px", marginTop: "20px" }}>
-              {completedJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="history-job-card"
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: "16px",
-                    background: "rgba(163, 230, 53, 0.06)",
-                    border: "1px solid rgba(163, 230, 53, 0.15)"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ fontSize: "24px" }}>
-                      {job.type === "image" ? "🎨" : "🎬"}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                        <strong>{job.name || (job.type === "image" ? "图片生成" : "视频生成")}</strong>
-                        <span className="pill" style={{ background: "rgba(163, 230, 53, 0.2)", height: "24px", padding: "0 10px", fontSize: "12px" }}>
-                          已完成
-                        </span>
-                      </div>
-                      <p className="muted" style={{ margin: 0, fontSize: "14px" }}>
-                        {job.message}
-                      </p>
-                    </div>
-                    <span className="muted" style={{ fontSize: "13px" }}>
-                      {new Date(job.createdAt).toLocaleString("zh-CN", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
       </div>
     </main>
   );
