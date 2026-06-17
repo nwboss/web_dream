@@ -75,6 +75,16 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
     }
   }, [missingReferences]);
 
+  useEffect(() => {
+    const hasProcessingJob = jobs.some((job) => job.status === "processing");
+    if (hasProcessingJob) {
+      const interval = setInterval(() => {
+        router.refresh();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [jobs, router]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
