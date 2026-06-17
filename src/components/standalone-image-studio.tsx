@@ -40,11 +40,9 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
   );
   const [restoredPrompt, setRestoredPrompt] = useState(pendingRestore?.prompt || "");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(assets[0]?.id || null);
-  const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const latestAsset = assets.find((asset) => asset.id === selectedAssetId) || assets[0];
   const latestJob = jobs[0];
-  const allJobs = [...pendingJobs, ...jobs];
 
   useEffect(() => {
     if (!assets.length) {
@@ -57,26 +55,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
       setSelectedAssetId(assets[0].id);
     }
   }, [assets, selectedAssetId]);
-
-  useEffect(() => {
-    // 如果有正在处理的任务，启动轮询
-    const hasProcessingJob = jobs.some((job) => job.status === "processing");
-
-    if (hasProcessingJob) {
-      const interval = setInterval(() => {
-        router.refresh();
-      }, 5000); // 每5秒刷新一次
-
-      return () => clearInterval(interval);
-    }
-  }, [jobs, router]);
-
-  useEffect(() => {
-    // 清理已经出现在真实 jobs 中的 pending jobs
-    if (pendingJobs.length > 0) {
-      setPendingJobs(prev => prev.filter(pj => !jobs.some(j => j.id === pj.id)));
-    }
-  }, [jobs, pendingJobs.length]);
 
   useEffect(() => {
     if (pendingRestore) {
@@ -104,19 +82,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
     const payload = Object.fromEntries(formData.entries());
     const prompt = payload.prompt as string;
 
-    // 立即创建一个临时 job 显示在界面上
-    const tempJob: Job = {
-      id: `temp-${Date.now()}`,
-      kind: "image",
-      status: "processing",
-      createdAt: new Date().toISOString(),
-      message: prompt,
-      name: `图片 #${jobs.filter(j => j.kind === 'image').length + pendingJobs.length + 1}`
-    };
-    setPendingJobs(prev => [tempJob, ...prev]);
-
     startTransition(async () => {
-      setMessage("");
+      setMessage("任务提交中...");
       const response = await fetch("/api/studio/image", {
         method: "POST",
         headers: {
@@ -132,16 +99,11 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
 
       if (!response.ok || !data.ok) {
         setMessage(data.message || "图片生成失败，请稍后再试。");
-        // 移除临时 job
-        setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
         return;
       }
 
       setMessage(data.message || "图片生成任务已提交，正在后台处理...");
       setRestoredPrompt("");
-      // 移除临时 job
-      setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
-      // 刷新页面数据
       router.refresh();
     });
   }
@@ -218,10 +180,9 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
     <div className="chat-studio-container">
       {/* 历史记录区域 - 可滚动 */}
       <div className="chat-history-area">
-        {assets.length > 0 || allJobs.length > 0 ? (
+        {assets.length > 0 || jobs.length > 0 ? (
           <div className="chat-messages">
-            {/* 显示所有任务和资源，按时间排序 */}
-            {[...allJobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
+            {[...jobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
               ...assets.map(asset => ({ type: 'asset' as const, data: asset, time: asset.createdAt }))]
               .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
               .map((item) => {

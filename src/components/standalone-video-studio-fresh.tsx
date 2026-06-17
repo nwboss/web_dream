@@ -47,7 +47,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       : "doubao-seedance-1-5-pro-251215"
   );
   const [restoredPrompt, setRestoredPrompt] = useState(pendingRestore?.prompt || "");
-  const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
+
   const [isDraggingStart, setIsDraggingStart] = useState(false);
   const [isDraggingEnd, setIsDraggingEnd] = useState(false);
   const [isDraggingMultimodal, setIsDraggingMultimodal] = useState(false);
@@ -65,7 +65,6 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
   const fileEndInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const multimodalInputRef = useRef<HTMLInputElement | null>(null);
-  const allJobs = [...pendingJobs, ...jobs];
 
   useEffect(() => {
     const hasProcessingJob = jobs.some((job) => job.status === "processing");
@@ -75,11 +74,6 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     }
   }, [jobs, router]);
 
-  useEffect(() => {
-    if (pendingJobs.length > 0) {
-      setPendingJobs(prev => prev.filter(pj => !jobs.some(j => j.id === pj.id)));
-    }
-  }, [jobs, pendingJobs.length]);
 
   useEffect(() => {
     if (pendingRestore) {
@@ -115,24 +109,13 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     const mentionableFiles = getMentionableFiles();
 
     mentionableFiles.forEach(file => {
-      // 检查prompt中是否包含 @文件名
       if (prompt.includes(`@${file.title}`)) {
         referencedFileIds.push(file.id);
       }
     });
 
-    const tempJob: Job = {
-      id: `temp-${Date.now()}`,
-      kind: "video",
-      status: "processing",
-      createdAt: new Date().toISOString(),
-      message: prompt,
-      name: `视频 #${jobs.filter(j => j.kind === 'video').length + pendingJobs.length + 1}`
-    };
-    setPendingJobs(prev => [tempJob, ...prev]);
-
     startTransition(async () => {
-      setMessage("");
+      setMessage("任务提交中...");
       const response = await fetch("/api/studio/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -148,13 +131,11 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
 
       if (!response.ok || !data.ok) {
         setMessage(data.message || "视频生成失败");
-        setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
         return;
       }
 
       setMessage(data.message || "视频生成中...");
       setRestoredPrompt("");
-      setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
       router.refresh();
     });
   }
@@ -363,9 +344,9 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
     <div className="chat-studio-container">
       {/* 历史记录区域 - 可滚动 */}
       <div className="chat-history-area">
-        {assets.length > 0 || allJobs.length > 0 ? (
+        {assets.length > 0 || jobs.length > 0 ? (
           <div className="chat-messages">
-            {[...allJobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
+            {[...jobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
               ...assets.map(asset => ({ type: 'asset' as const, data: asset, time: asset.createdAt }))]
               .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
               .map((item) => {
