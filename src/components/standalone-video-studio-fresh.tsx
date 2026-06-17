@@ -15,14 +15,14 @@ type StandaloneVideoStudioProps = {
   referenceFiles: StudioReferenceFile[];
   pendingRestore?: {
     prompt: string;
-    aspectRatio?: "9:16" | "16:9" | "1:1";
+    aspectRatio?: "21:9" | "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
     duration?: number;
     model?: string;
   };
   missingReferences?: boolean;
 };
 
-const aspectRatios = ["16:9", "9:16", "1:1"] as const;
+const aspectRatios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"] as const;
 const videoModels = [
   { value: "doubao-seedance-1-5-pro-251215", label: "Seeddance 1.5 Pro", description: "支持首尾帧" },
   { value: "doubao-seedance-2-0-260128", label: "Seedance 2.0", description: "多模态视频生成" },
@@ -364,7 +364,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
       <div className="chat-history-area">
         {assets.length > 0 || allJobs.length > 0 ? (
           <div className="chat-messages">
-            {[...allJobs.map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
+            {[...allJobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
               ...assets.map(asset => ({ type: 'asset' as const, data: asset, time: asset.createdAt }))]
               .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
               .map((item) => {

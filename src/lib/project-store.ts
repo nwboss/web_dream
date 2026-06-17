@@ -12,7 +12,7 @@ export type Shot = {
   description: string;
   prompt: string;
   status: ShotStatus;
-  aspectRatio: "9:16" | "16:9" | "1:1";
+  aspectRatio: "21:9" | "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
   updatedAt: string;
   jobs: Job[];
   assets: Asset[];

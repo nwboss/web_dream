@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const session = await requireSession();
   const body = (await request.json()) as {
     prompt?: string;
-    aspectRatio?: "9:16" | "16:9" | "1:1";
+    aspectRatio?: "21:9" | "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
     title?: string;
     model?: string;
   };

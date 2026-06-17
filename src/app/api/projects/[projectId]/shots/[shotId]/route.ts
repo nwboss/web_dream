@@ -18,7 +18,7 @@ export async function PATCH(request: Request, context: Context) {
     description?: string;
     prompt?: string;
     status?: "draft" | "ready" | "generating" | "done";
-    aspectRatio?: "9:16" | "16:9" | "1:1";
+    aspectRatio?: "21:9" | "16:9" | "4:3" | "1:1" | "3:4" | "9:16";
   };
 
   const result = await updateShot(session.email, projectId, shotId, {

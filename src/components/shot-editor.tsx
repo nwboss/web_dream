@@ -12,14 +12,20 @@ type ShotEditorProps = {
 };
 
 const statuses: ShotStatus[] = ["draft", "ready", "generating", "done"];
-const aspectRatios: Shot["aspectRatio"][] = ["9:16", "16:9", "1:1"];
+const aspectRatios: Shot["aspectRatio"][] = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 
 function getResolutionLabel(aspectRatio: Shot["aspectRatio"]) {
   switch (aspectRatio) {
+    case "21:9":
+      return "1848 × 792 / 超宽";
     case "16:9":
       return "1664 × 936 / 高清 2K";
+    case "4:3":
+      return "1328 × 996 / 经典 4:3";
     case "1:1":
       return "1328 × 1328 / 标清 1K";
+    case "3:4":
+      return "996 × 1328 / 竖屏 3:4";
     case "9:16":
     default:
       return "936 × 1664 / 竖屏故事";

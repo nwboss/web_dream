@@ -18,7 +18,7 @@ type StandaloneImageStudioProps = {
   missingReferences?: boolean;
 };
 
-const aspectRatios: Shot["aspectRatio"][] = ["9:16", "1:1", "16:9"];
+const aspectRatios: Shot["aspectRatio"][] = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const imageModels = [
   { value: "jimeng-3.1", label: "即梦 3.1", description: "支持图生图" },
   { value: "doubao-seedream-4-5-251128", label: "Seedream 4.5", description: "高质量图片生成" }
@@ -219,7 +219,7 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
         {assets.length > 0 || allJobs.length > 0 ? (
           <div className="chat-messages">
             {/* 显示所有任务和资源，按时间排序 */}
-            {[...allJobs.map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
+            {[...allJobs.filter(job => job.status !== 'succeeded').map(job => ({ type: 'job' as const, data: job, time: job.createdAt })),
               ...assets.map(asset => ({ type: 'asset' as const, data: asset, time: asset.createdAt }))]
               .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
               .map((item) => {

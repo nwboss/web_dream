@@ -15,7 +15,7 @@ type StandaloneVideoStudioProps = {
   referenceFiles: StudioReferenceFile[];
 };
 
-const aspectRatios = ["16:9", "9:16", "1:1"] as const;
+const aspectRatios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"] as const;
 const videoModels = [
   { value: "doubao-seedance-1-5-pro-251215", label: "Seeddance 1.5 Pro", description: "支持首尾帧" },
   { value: "doubao-seedance-2-0-260128", label: "Seedance 2.0", description: "多模态视频生成" },

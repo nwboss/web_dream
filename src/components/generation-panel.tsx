@@ -18,10 +18,16 @@ type StudioMode = "image" | "video";
 
 function getAspectSummary(aspectRatio: Shot["aspectRatio"]) {
   switch (aspectRatio) {
+    case "21:9":
+      return "21:9 · 超宽";
     case "16:9":
       return "16:9 · 高清 2K";
+    case "4:3":
+      return "4:3 · 经典比例";
     case "1:1":
       return "1:1 · 标准封面";
+    case "3:4":
+      return "3:4 · 竖屏";
     case "9:16":
     default:
       return "9:16 · 竖屏故事";

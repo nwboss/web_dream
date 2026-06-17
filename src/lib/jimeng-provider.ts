@@ -59,10 +59,16 @@ function isRealMode() {
 
 function mapAspectRatioToSize(aspectRatio: Shot["aspectRatio"]) {
   switch (aspectRatio) {
+    case "21:9":
+      return "1848x792";
     case "16:9":
       return "1280x720";
+    case "4:3":
+      return "1280x960";
     case "1:1":
       return "1024x1024";
+    case "3:4":
+      return "960x1280";
     case "9:16":
     default:
       return "720x1280";
@@ -259,8 +265,11 @@ async function sleep(ms: number) {
 async function generateJimengImageOfficial(input: ImageGenerationInput): Promise<ProviderImageResult> {
   const { shot, referenceImageBase64 } = input;
   const widthHeightMap: Record<Shot["aspectRatio"], { width: number; height: number }> = {
-    "1:1": { width: 1328, height: 1328 },
+    "21:9": { width: 1848, height: 792 },
     "16:9": { width: 1664, height: 936 },
+    "4:3": { width: 1328, height: 996 },
+    "1:1": { width: 1328, height: 1328 },
+    "3:4": { width: 996, height: 1328 },
     "9:16": { width: 936, height: 1664 }
   };
 
