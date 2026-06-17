@@ -139,6 +139,8 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
 
       setMessage(data.message || "图片生成任务已提交，正在后台处理...");
       setRestoredPrompt("");
+      // 移除临时 job
+      setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
       // 刷新页面数据
       router.refresh();
     });

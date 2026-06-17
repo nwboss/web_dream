@@ -154,6 +154,7 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
 
       setMessage(data.message || "视频生成中...");
       setRestoredPrompt("");
+      setPendingJobs(prev => prev.filter(j => j.id !== tempJob.id));
       router.refresh();
     });
   }
