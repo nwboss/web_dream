@@ -705,16 +705,18 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
               </div>
 
               <div className="chat-duration-control">
-                <div className="duration-label">{selectedDuration}s</div>
                 <input
-                  type="range"
+                  type="number"
                   min="1"
-                  max={selectedModel === "doubao-seedance-2-0-260128" ? "11" : "10"}
+                  max={selectedModel === "doubao-seedance-2-0-260128" ? 11 : 10}
                   step="1"
                   value={selectedDuration}
-                  onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                  className="duration-slider"
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1) setSelectedDuration(v);
+                  }}
                 />
+                <span>秒</span>
               </div>
             </div>
           </div>
