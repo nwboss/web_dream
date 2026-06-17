@@ -477,78 +477,160 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
           </div>
         )}
 
-        <div className="chat-input-wrapper">
-          {/* 参考帧预览 */}
-          <div className="chat-references">
-            {referenceImage && (
-              <div className="chat-reference-preview">
-                <img src={referenceImage.previewUrl} alt="首帧" />
-                <span className="chat-reference-label">首帧</span>
-                <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
-                  {referenceImage.title}
-                </span>
-                <button type="button" className="chat-reference-remove" onClick={() => {
-                  fetch("/api/studio/reference", { method: "DELETE" }).then(() => router.refresh());
-                }}>×</button>
-              </div>
-            )}
-            {referenceEndImage && (
-              <div className="chat-reference-preview">
-                <img src={referenceEndImage.previewUrl} alt="尾帧" />
-                <span className="chat-reference-label">尾帧</span>
-                <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
-                  {referenceEndImage.title}
-                </span>
-                <button type="button" className="chat-reference-remove" onClick={() => {
-                  fetch("/api/studio/reference-end", { method: "DELETE" }).then(() => router.refresh());
-                }}>×</button>
-              </div>
-            )}
-            {orderedReferenceFiles.map((file, index) => (
-              <div
-                key={file.id}
-                className="chat-reference-preview"
-                draggable
-                onDragStart={() => setDraggingIndex(index)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (draggingIndex === null || draggingIndex === index) return;
-                  const newOrder = [...orderedReferenceFiles];
-                  const [moved] = newOrder.splice(draggingIndex, 1);
-                  newOrder.splice(index, 0, moved);
-                  setOrderedReferenceFiles(newOrder);
-                  setDraggingIndex(null);
-                  fetch("/api/studio/reference-files", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ orderedIds: newOrder.map(f => f.id) })
-                  }).then(() => router.refresh()).catch(console.error);
-                }}
-                style={{
-                  position: "relative",
-                  cursor: "move",
-                  opacity: draggingIndex === index ? 0.5 : 1
-                }}
-              >
-                {file.type === 'image' && <img src={file.previewUrl} alt={file.title} />}
-                {file.type === 'video' && <video src={file.previewUrl} />}
-                {file.type === 'audio' && <div className="audio-preview">🎵</div>}
-                <span className="chat-reference-label">{file.type === 'image' ? '图片' : file.type === 'video' ? '视频' : '音频'}</span>
-                <button type="button" className="chat-reference-remove" onClick={() => {
-                  fetch(`/api/studio/reference-files?id=${file.id}`, { method: 'DELETE' }).then(() => router.refresh());
-                }}>×</button>
-                <div style={{ padding: "4px 6px", fontSize: "11px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {file.title}
+        <div className="chat-input-wrapper" style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          {/* 参考帧预览 - 左侧竖排 */}
+          {(referenceImage || referenceEndImage || orderedReferenceFiles.length > 0) && (
+            <div className="chat-references" style={{ flexShrink: 0, marginBottom: 0 }}>
+              {referenceImage && (
+                <div className="chat-reference-preview">
+                  <img src={referenceImage.previewUrl} alt="首帧" />
+                  <span className="chat-reference-label">首帧</span>
+                  <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                    {referenceImage.title}
+                  </span>
+                  <button type="button" className="chat-reference-remove" onClick={() => {
+                    fetch("/api/studio/reference", { method: "DELETE" }).then(() => router.refresh());
+                  }}>×</button>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+              {referenceEndImage && (
+                <div className="chat-reference-preview">
+                  <img src={referenceEndImage.previewUrl} alt="尾帧" />
+                  <span className="chat-reference-label">尾帧</span>
+                  <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                    {referenceEndImage.title}
+                  </span>
+                  <button type="button" className="chat-reference-remove" onClick={() => {
+                    fetch("/api/studio/reference-end", { method: "DELETE" }).then(() => router.refresh());
+                  }}>×</button>
+                </div>
+              )}
+              {orderedReferenceFiles.map((file, index) => (
+                <div
+                  key={file.id}
+                  className="chat-reference-preview"
+                  draggable
+                  onDragStart={() => setDraggingIndex(index)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggingIndex === null || draggingIndex === index) return;
+                    const newOrder = [...orderedReferenceFiles];
+                    const [moved] = newOrder.splice(draggingIndex, 1);
+                    newOrder.splice(index, 0, moved);
+                    setOrderedReferenceFiles(newOrder);
+                    setDraggingIndex(null);
+                    fetch("/api/studio/reference-files", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ orderedIds: newOrder.map(f => f.id) })
+                    }).then(() => router.refresh()).catch(console.error);
+                  }}
+                  style={{
+                    position: "relative",
+                    cursor: "move",
+                    opacity: draggingIndex === index ? 0.5 : 1
+                  }}
+                >
+                  {file.type === 'image' && <img src={file.previewUrl} alt={file.title} />}
+                  {file.type === 'video' && <video src={file.previewUrl} />}
+                  {file.type === 'audio' && <div className="audio-preview">🎵</div>}
+                  <span className="chat-reference-label">{file.type === 'image' ? '图片' : file.type === 'video' ? '视频' : '音频'}</span>
+                  <button type="button" className="chat-reference-remove" onClick={() => {
+                    fetch(`/api/studio/reference-files?id=${file.id}`, { method: 'DELETE' }).then(() => router.refresh());
+                  }}>×</button>
+                  <div style={{ padding: "4px 6px", fontSize: "11px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {file.title}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-          <div className="chat-input-controls">
-            {/* 工具栏 */}
+          <div className="chat-input-controls" style={{ flex: 1, minWidth: 0 }}>
+            {/* 输入框 - 上方 */}
+            <div className="chat-input-row" style={{ position: 'relative' }}>
+              <textarea
+                ref={textareaRef}
+                id="prompt"
+                name="prompt"
+                rows={3}
+                placeholder="描述你想生成的视频... 输入 @ 可引用已上传的文件"
+                required
+                className="chat-textarea"
+                value={restoredPrompt}
+                onChange={(e) => setRestoredPrompt(e.target.value)}
+                onInput={handleTextareaInput}
+                onKeyDown={(e) => {
+                  if (showMentionMenu && e.key === 'Escape') {
+                    e.preventDefault();
+                    setShowMentionMenu(false);
+                  }
+                }}
+              />
+
+              {showMentionMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: 0,
+                  marginBottom: '8px',
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: 'var(--shadow-lg)',
+                  padding: '8px',
+                  minWidth: '280px',
+                  maxHeight: '240px',
+                  overflowY: 'auto',
+                  zIndex: 100
+                }}>
+                  {filteredFiles.length > 0 ? (
+                    filteredFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                          background: 'transparent'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          insertMention(file.title);
+                        }}
+                      >
+                        {file.type === 'audio' ? (
+                          <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>🎵</div>
+                        ) : file.type === 'video' ? (
+                          <video src={file.previewUrl} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', pointerEvents: 'none' }} />
+                        ) : (
+                          <img src={file.previewUrl} alt={file.title} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', pointerEvents: 'none' }} />
+                        )}
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', pointerEvents: 'none' }}>{file.title}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      暂无可引用的文件
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button className="chat-send-btn" type="submit" disabled={isPending}>
+                {isPending ? "⏳" : "→"}
+              </button>
+            </div>
+
+            {/* 工具栏 - 下方 */}
             <div className="chat-toolbar">
               {/* 首尾帧上传 */}
               {selectedModel === "doubao-seedance-1-5-pro-251215" && (
@@ -634,86 +716,6 @@ export function StandaloneVideoStudio({ assets, jobs, referenceImage, referenceE
                   className="duration-slider"
                 />
               </div>
-            </div>
-
-            {/* 输入框和发送按钮 */}
-            <div className="chat-input-row" style={{ position: 'relative' }}>
-              <textarea
-                ref={textareaRef}
-                id="prompt"
-                name="prompt"
-                rows={3}
-                placeholder="描述你想生成的视频... 输入 @ 可引用已上传的文件"
-                required
-                className="chat-textarea"
-                value={restoredPrompt}
-                onChange={(e) => setRestoredPrompt(e.target.value)}
-                onInput={handleTextareaInput}
-                onKeyDown={(e) => {
-                  if (showMentionMenu && e.key === 'Escape') {
-                    e.preventDefault();
-                    setShowMentionMenu(false);
-                  }
-                }}
-              />
-
-              {showMentionMenu && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: 0,
-                  marginBottom: '8px',
-                  background: 'white',
-                  borderRadius: '12px',
-                  boxShadow: 'var(--shadow-lg)',
-                  padding: '8px',
-                  minWidth: '280px',
-                  maxHeight: '240px',
-                  overflowY: 'auto',
-                  zIndex: 100
-                }}>
-                  {filteredFiles.length > 0 ? (
-                    filteredFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'background 0.15s',
-                          background: 'transparent'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          insertMention(file.title);
-                        }}
-                      >
-                        {file.type === 'audio' ? (
-                          <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>🎵</div>
-                        ) : file.type === 'video' ? (
-                          <video src={file.previewUrl} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', pointerEvents: 'none' }} />
-                        ) : (
-                          <img src={file.previewUrl} alt={file.title} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', pointerEvents: 'none' }} />
-                        )}
-                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', pointerEvents: 'none' }}>{file.title}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                      暂无可引用的文件
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <button className="chat-send-btn" type="submit" disabled={isPending}>
-                {isPending ? "⏳" : "→"}
-              </button>
             </div>
           </div>
         </div>

@@ -2373,8 +2373,8 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .chat-references {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 6px;
   flex-wrap: wrap;
   animation: fadeIn 0.3s ease-out;
 }

@@ -284,10 +284,10 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
 
       {/* 输入区域 - 固定在底部 */}
       <form className="chat-input-area" onSubmit={handleSubmit}>
-        <div className="chat-input-wrapper">
-          {/* 参考图 */}
+        <div className="chat-input-wrapper" style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          {/* 参考图 - 左侧 */}
           {referenceImage && (
-            <div className="chat-reference-preview">
+            <div className="chat-reference-preview" style={{ flexShrink: 0, marginBottom: 0 }}>
               <img src={referenceImage.previewUrl} alt={referenceImage.title} />
               <button type="button" className="chat-reference-remove" onClick={handleRemoveReference}>×</button>
               <span style={{ position: "absolute", bottom: "2px", left: "2px", right: "2px", fontSize: "11px", color: "white", background: "rgba(0,0,0,0.6)", padding: "2px 4px", borderRadius: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
@@ -296,8 +296,25 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
             </div>
           )}
 
-          <div className="chat-input-controls">
-            {/* 工具栏 */}
+          <div className="chat-input-controls" style={{ flex: 1, minWidth: 0 }}>
+            {/* 输入框 - 上方 */}
+            <div className="chat-input-row">
+              <textarea
+                id="prompt"
+                name="prompt"
+                rows={3}
+                placeholder="描述你想生成的图片..."
+                required
+                className="chat-textarea"
+                value={restoredPrompt}
+                onChange={(e) => setRestoredPrompt(e.target.value)}
+              />
+              <button className="chat-send-btn" type="submit" disabled={isPending}>
+                {isPending ? "⏳" : "→"}
+              </button>
+            </div>
+
+            {/* 工具栏 - 下方 */}
             <div className="chat-toolbar">
               <button type="button" className="chat-tool-btn" onClick={() => fileInputRef.current?.click()} title="上传参考图">
                 📎
@@ -338,23 +355,6 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
                 ℹ️ Seedream 4.5 不支持图生图，将忽略参考图
               </div>
             )}
-
-            {/* 输入框和发送按钮 */}
-            <div className="chat-input-row">
-              <textarea
-                id="prompt"
-                name="prompt"
-                rows={3}
-                placeholder="描述你想生成的图片..."
-                required
-                className="chat-textarea"
-                value={restoredPrompt}
-                onChange={(e) => setRestoredPrompt(e.target.value)}
-              />
-              <button className="chat-send-btn" type="submit" disabled={isPending}>
-                {isPending ? "⏳" : "→"}
-              </button>
-            </div>
           </div>
         </div>
 
