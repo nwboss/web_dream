@@ -336,16 +336,24 @@ export function StandaloneImageStudio({ assets, jobs, referenceImage, pendingRes
               </div>
 
               <div className="chat-ratio-select">
-                {aspectRatios.map((ratio) => (
-                  <button
-                    key={ratio}
-                    className={`studio-chip ${selectedAspectRatio === ratio ? "is-active" : ""}`}
-                    type="button"
-                    onClick={() => setSelectedAspectRatio(ratio)}
-                  >
-                    {ratio}
-                  </button>
-                ))}
+                <select
+                  value={selectedAspectRatio}
+                  onChange={(e) => setSelectedAspectRatio(e.target.value as Shot["aspectRatio"])}
+                  style={{
+                    padding: "4px 6px",
+                    fontSize: "12px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: "6px",
+                    background: "white",
+                    color: "var(--text)",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  {aspectRatios.map((ratio) => (
+                    <option key={ratio} value={ratio}>{ratio}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
